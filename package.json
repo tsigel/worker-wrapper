@@ -1,0 +1,9 @@
+{
+  "name": "worker-wrapper",
+  "version": "0.0.1",
+  "dependencies": {
+  },
+  "devDependencies": {
+    "typescript": "^2.4.2"
+  }
+}
