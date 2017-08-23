@@ -25,6 +25,9 @@
     "typescript": "^2.4.2",
     "uglify-js": "^3.0.28"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "compile": "node_modules/.bin/tsc -p ./ && node_modules/.bin/tsc -p ./test && node_modules/.bin/tsc karma.conf.ts",
     "pretest": "npm run build",
@@ -34,6 +37,8 @@
     "browserify": "node_modules/.bin/browserify dist/js/WorkerWrapper.js -o dist/WorkerWrapper.js -s worker-wrapper",
     "copyInterface": "cp ./src/interface.d.ts dist/js/interface.d.ts",
     "build": "npm run compile && npm run browserify && npm run uglify && npm run copyInterface",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "preversion": "npm run test",
+    "postversion": "git push origin HEAD && git push origin HEAD --tags",
   }
 }
