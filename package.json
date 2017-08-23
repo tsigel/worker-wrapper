@@ -39,6 +39,6 @@
     "build": "npm run compile && npm run browserify && npm run uglify && npm run copyInterface",
     "clean": "rm -rf dist",
     "preversion": "npm run test",
-    "postversion": "git push origin HEAD && git push origin HEAD --tags"
+    "postversion": "git push origin HEAD && git push origin HEAD --tags && npm publish"
   }
 }
