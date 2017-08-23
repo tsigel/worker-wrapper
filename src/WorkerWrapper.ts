@@ -1,34 +1,29 @@
-///<reference path="interface.d.ts"/>
+import { WorkerBody, MESSAGE_TYPE } from './WorkerBody';
+import { IContent, IDefer, IHash, IOptions, TTypeList, TWrapped } from './interface';
 
-class WorkerWrapper<T extends Function> {
+
+export class WorkerWrapper<T> {
+
 
     public static defaultOptions: IOptions = {
-        workerPath: '',
-        libs: []
+        libs: [],
+        customWorker: WorkerBody
     };
 
     private _worker: Worker;
     private _actionsHash: IHash<IDefer<any>>;
 
-    constructor(child: T, options: IOptions) {
-        const path = options.workerPath || WorkerWrapper.defaultOptions.workerPath;
 
-        if (path === '') {
-            throw new Error('Has no path for load worker!');
-        }
+    constructor(child: TWrapped<T>, options: IOptions = Object.create(null)) {
 
-        this._worker = new Worker(options.workerPath || WorkerWrapper.defaultOptions.workerPath);
+        const myOptions = { ...WorkerWrapper.defaultOptions, ...options };
         this._actionsHash = Object.create(null);
-
-        this._worker.postMessage({
-            type: 'initialize',
-            contentData: WorkerWrapper.stringify(child),
-            libs: options.libs || WorkerWrapper.defaultOptions.libs
-        });
-        this.setHandlers();
+        this._createWorker(myOptions);
+        this._setHandlers();
+        this._initializeWorker(child, myOptions);
     }
 
-    public process<R>(cb: (T) => Promise<R>): Promise<R> {
+    public process<R>(cb: (data: T) => Promise<R>): Promise<R> {
         const id = Date.now();
         return new Promise((resolve, reject) => {
             this._actionsHash[id] = {
@@ -36,7 +31,7 @@ class WorkerWrapper<T extends Function> {
                 reject: reject
             };
             this._worker.postMessage({
-                type: 'work',
+                type: MESSAGE_TYPE.WORK,
                 data: {
                     id: id,
                     job: cb.toString()
@@ -50,30 +45,51 @@ class WorkerWrapper<T extends Function> {
         this._worker.terminate();
     }
 
-    private setHandlers() {
+    private _createWorker(optopns: IOptions): void {
+        const codeData = WorkerWrapper._stringify(optopns.customWorker);
+        const template = `var MyWorker = ${codeData.template} ;new MyWorker()`;
+
+        const blob = new Blob([template], { type: 'application/javascript' });
+        this._worker = new Worker(URL.createObjectURL(blob));
+    }
+
+    private _initializeWorker(child: TWrapped<T>, options: IOptions): void {
+        this._worker.postMessage({
+            type: MESSAGE_TYPE.INITIALIZE,
+            contentData: WorkerWrapper._stringify(child),
+            libs: options.libs,
+            url: `${location.protocol}//${location.host}`
+        });
+    }
+
+    private _setHandlers(): void {
         this._worker.onmessage = (e) => {
+            if (e.data.type === 'ERROR') {
+                this.terminate();
+                throw new Error(e.data.error);
+            }
             if (e.data.error != null) {
-                this._actionsHash[e.data.id].reject(e.data.result);
+                this._actionsHash[e.data.id].reject(e.data.error);
             } else {
                 this._actionsHash[e.data.id].resolve(e.data.result);
             }
         }
     }
 
-    private static stringify(child: any): { template: string; isSimple: boolean } {
+    private static _stringify(child: any): { template: string; isSimple: boolean } {
 
         if (typeof child !== 'function') {
             throw new Error('Wrong params!');
         }
 
-        let template = '(function () {';
+        let template = '(function () {\n';
 
-        if (WorkerWrapper.isSimple(child)) {
-            template += `return ${String(child)}})();`;
+        if (WorkerWrapper._isSimple(child)) {
+            template += `   return ${String(child)}})();`;
             return { template, isSimple: true };
         }
 
-        WorkerWrapper.getParentList(child).forEach((item, i, list) => {
+        WorkerWrapper._getParentList(child).forEach((item, i, list) => {
 
             const name = item.name || 'Class';
             const _super = list[i - 1];
@@ -85,34 +101,34 @@ class WorkerWrapper<T extends Function> {
                 return null;
             }
 
-            template += `var ${name} = ${WorkerWrapper.processSuper(Constructor, _super, false)}`;
+            template += `   var ${name} = ${WorkerWrapper._processSuper(Constructor, _super, false)}` + '\n';
             if (_super) {
-                template += `${name}.prototype = new ${_super.name}();`;
-                template += `${name}.prototype.constructor = ${name};`;
+                template += `   ${name}.prototype = new ${_super.name}();` + '\n';
+                template += `   ${name}.prototype.constructor = ${name};` + '\n';
             }
 
-            WorkerWrapper.getContent(item.prototype, true)
-                .concat(WorkerWrapper.getContent(item, false))
+            WorkerWrapper._getContent(item.prototype, true)
+                .concat(WorkerWrapper._getContent(item, false))
                 .forEach((content) => {
-                    const value = WorkerWrapper.processSuper(content.value, _super, content.isPrototype);
+                    const value = WorkerWrapper._processSuper(content.value, _super, content.isPrototype);
                     if (content.isPrototype) {
-                        template += `${name}.prototype.${content.name} = ${value};`;
+                        template += `   ${name}.prototype.${content.name} = ${value};` + '\n';
                     } else {
-                        template += `${name}.${content.name} = ${value};`;
+                        template += `   ${name}.${content.name} = ${value};` + '\n';
                     }
                 });
         });
 
-        template += `return ${child.name};})()`;
+        template += `   return ${child.name};\n})()` + '\n';
 
         return { template, isSimple: false };
     }
 
-    private static isSimple(child: any): boolean {
+    private static _isSimple(child: any): boolean {
         return Object.getOwnPropertyNames(child.prototype).length === 1 && child.prototype.constructor === child;
     }
 
-    private static getContent(content, isPrototype: boolean): Array<IContent> {
+    private static _getContent(content, isPrototype: boolean): Array<IContent> {
         return Object.keys(content || {})
             .filter((name) => name !== 'constructor')
             .map((name) => {
@@ -139,7 +155,7 @@ class WorkerWrapper<T extends Function> {
             });
     }
 
-    private static getParentList(child) {
+    private static _getParentList(child): Array<any> {
         const result = [child];
         let tmp = child;
         let item = Object.getPrototypeOf(tmp);
@@ -153,8 +169,8 @@ class WorkerWrapper<T extends Function> {
         return result.reverse();
     }
 
-    private static processSuper(content: string, parent: any, isPrototype: boolean) {
-        const reg = /\b(_super)\b/;
+    private static _processSuper(content: string, parent: any, isPrototype: boolean): string {
+        const reg = /\b(_super)\b/g;
         return content.replace(reg, function () {
             if (isPrototype) {
                 return `${parent.name}.prototype`;

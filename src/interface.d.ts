@@ -1,43 +1,57 @@
-interface IOptions {
-    workerPath?: string;
+import { MESSAGE_TYPE, WorkerBody } from './WorkerBody';
+
+
+export interface IOptions {
     libs?: Array<string>;
+    customWorker?: typeof WorkerBody;
 }
 
-interface IContent {
+export interface IContent {
     name: string;
     value: string;
     type: TTypeList;
     isPrototype: boolean;
 }
 
-interface IHash<T> {
+export interface IHash<T> {
     [key: string]: T;
 }
 
-interface IInitializeMessage {
-    type: 'initialize';
+export interface IInitializeMessage {
+    type: MESSAGE_TYPE.INITIALIZE;
     contentData: IContentData;
     libs: Array<string>;
+    url: string;
 }
 
-interface IWorkAction {
-    type: 'work',
+export interface IWorkAction {
+    type: MESSAGE_TYPE.WORK;
     data: {
         id: number;
         job: string;
     }
 }
 
-interface IContentData {
+export interface IMessage<T> extends MessageEvent {
+    data: T;
+}
+
+export interface IContentData {
     isSimple: boolean;
     template: string;
 }
 
-interface IDefer<T> {
+export interface IDefer<T> {
     resolve: (data: T) => void;
     reject: (data: any) => void;
 }
 
-type TPoseMessage = IInitializeMessage | IWorkAction;
+export interface IAnyClass<T> {
+    new (): T;
+}
 
-type TTypeList = 'string' | 'number' | 'function' | 'object' | 'boolean' | 'undefined'
+export type TWrapped<T> = IAnyClass<T> | T
+
+export type TMessage = IMessage<IInitializeMessage> | IMessage<IWorkAction>;
+
+export type TTypeList = 'string' | 'number' | 'function' | 'object' | 'boolean' | 'undefined'

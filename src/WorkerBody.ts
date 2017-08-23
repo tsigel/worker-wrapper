@@ -1,4 +1,12 @@
-class WorkerBody {
+import { IContentData, IWorkAction, TMessage } from './interface';
+
+
+export const enum MESSAGE_TYPE {
+    INITIALIZE,
+    WORK
+}
+
+export class WorkerBody {
 
     private child: any;
 
@@ -6,44 +14,55 @@ class WorkerBody {
         this.setHandlers();
     }
 
-    private setHandlers(): void {
-        self.onmessage = (message: IWorkerMessage) => {
-            switch (message.data.type) {
-                case 'initialize':
-                    if (message.data.libs && message.data.libs.length) {
-                        message.data.libs.forEach(lib => (self as any).importScripts(lib));
-                    }
-                    this.createWorkerBody(message.data.contentData);
-                    break;
-                case 'work':
-                    this.doWork(message.data);
-                    break;
-            }
+    protected setHandlers(): void {
+        (self as any).onmessage = (message: TMessage) => {
+            this.onMessage(message);
         };
     }
 
-    private doWork(message: IWorkAction): void {
-        const processor = eval(`(${message.data.job})`);
-        processor(this.child).then((result) => {
-            (self as any).postMessage({ id: message.data.id, result });
-        }, (error) => {
-            (self as any).postMessage({ id: message.data.id, error });
-        });
+    protected onMessage(message: TMessage): void {
+        switch (message.data.type) {
+            case MESSAGE_TYPE.INITIALIZE:
+                const url = message.data.url;
+                if (message.data.libs && message.data.libs.length) {
+                    message.data.libs.forEach(lib => (self as any).importScripts(url + lib));
+                }
+                this.createWorkerBody(message.data.contentData);
+                break;
+            case MESSAGE_TYPE.WORK:
+                this.doWork(message.data);
+                break;
+        }
     }
 
-    private createWorkerBody(content: IContentData) {
-        const Child = eval(content.template);
-        if (content.isSimple) {
-            this.child = Child;
-        } else {
-            this.child = new Child();
+    protected send(data: any): void {
+        (self as any).postMessage(data);
+    }
+
+    protected doWork(message: IWorkAction): void {
+        try {
+            const processor = eval(`(${message.data.job})`);
+            processor(this.child).then((result) => {
+                this.send({ id: message.data.id, result });
+            }, (error) => {
+                this.send({ id: message.data.id, error });
+            });
+        } catch (e) {
+            this.send({id: message.data.id, e});
+        }
+    }
+
+    protected createWorkerBody(content: IContentData) {
+        try {
+            const Child = eval(content.template);
+            if (content.isSimple) {
+                this.child = Child;
+            } else {
+                this.child = new Child();
+            }
+        } catch (e) {
+            this.send({type: 'ERROR', error: e});
         }
     }
 
 }
-
-interface IWorkerMessage {
-    data: TPoseMessage;
-}
-
-new WorkerBody();
