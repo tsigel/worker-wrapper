@@ -42,13 +42,18 @@ export class WorkerBody {
     protected doWork(message: IWorkAction): void {
         try {
             const processor = eval(`(${message.data.job})`);
-            processor(this.child).then((result) => {
+            const result = processor(this.child);
+            if (result && result.then && typeof result.then === 'function') {
+                result.then((data) => {
+                    this.send({ id: message.data.id, result: data });
+                }, (error) => {
+                    this.send({ id: message.data.id, error });
+                });
+            } else {
                 this.send({ id: message.data.id, result });
-            }, (error) => {
-                this.send({ id: message.data.id, error });
-            });
+            }
         } catch (e) {
-            this.send({id: message.data.id, e});
+            this.send({ id: message.data.id, e });
         }
     }
 
@@ -61,7 +66,7 @@ export class WorkerBody {
                 this.child = new Child();
             }
         } catch (e) {
-            this.send({type: 'ERROR', error: e});
+            this.send({ type: 'ERROR', error: e });
         }
     }
 

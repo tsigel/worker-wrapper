@@ -26,6 +26,18 @@ describe('WorkerWrapper', () => {
         });
     });
 
+    it('simple function without promise', (done) => {
+        const wrapper = new workerWrapper.WorkerWrapper(() => {
+            return 1;
+        });
+        wrapper.process((myFunc) => {
+            return myFunc();
+        }).then((data) => {
+            expect(data).to.be.ok();
+            done();
+        });
+    });
+
     it('simple function with reject', (done) => {
         const wrapper = new workerWrapper.WorkerWrapper(() => {
             return new Promise((resolve, reject) => {

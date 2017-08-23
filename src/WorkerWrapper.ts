@@ -23,7 +23,7 @@ export class WorkerWrapper<T> {
         this._initializeWorker(child, myOptions);
     }
 
-    public process<R>(cb: (data: T) => Promise<R>): Promise<R> {
+    public process<R>(cb: (data: T) => Promise<R>| R): Promise<R> {
         const id = Date.now();
         return new Promise((resolve, reject) => {
             this._actionsHash[id] = {
