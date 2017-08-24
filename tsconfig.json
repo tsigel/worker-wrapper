@@ -14,10 +14,7 @@
       "node_modules/@types"
     ]
   },
-  "exclude": [
-    "node_modules",
-    "karma.conf.ts",
-    "test",
-    "dist"
+  "files": [
+    "src/index.ts"
   ]
 }

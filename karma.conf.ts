@@ -14,6 +14,8 @@ module.exports = function (config) {
             { pattern: "node_modules/expect.js/index.js" },
             { pattern: "dist/WorkerWrapper.js" },
             { pattern: "src/**.ts", included: false },
+            { pattern: "test/**.ts", included: false },
+            { pattern: "test/*.js.map", included: false },
             { pattern: "test/**/*.js" },
         ],
 

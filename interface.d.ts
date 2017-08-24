@@ -1,8 +1,4 @@
-import { MESSAGE_TYPE, WorkerBody } from './WorkerBody';
-
-declare const workerWrapper: IMain;
-
-export interface IMain {
+interface IMain {
     create<T, R>(child: IAnyClass<T, R> | T, params: R, options?: Partial<IConfig>): IWrapProcess<T>;
 
     create<T>(child: IAnyClass<T, void> | T, options?: Partial<IConfig>): IWrapProcess<T>;
@@ -20,42 +16,68 @@ export interface IMain {
     config(config: Partial<IConfig>): void;
 }
 
-export interface IWorkerClassData<T, R> {
+declare const enum MESSAGE_TYPE {
+    ADD_LIBS = 0,
+    ADD_PROCESSOR = 1,
+    WORK = 2
+}
+
+declare class WorkerBody {
+    private child;
+
+    constructor();
+
+    protected setHandlers(): void;
+
+    protected onMessage(message: TTask): void;
+
+    protected addLibs(libs: Array<string>): void;
+
+    protected addProcessor(data: IAddProcessorTask): void;
+
+    protected process(cb: Function, id: string): void;
+
+    protected send(data: IResponse<any>): void;
+
+    protected doWork(message: IWorkTask): void;
+}
+
+interface IWorkerClassData<T, R> {
     child: IAnyClass<T, R> | T;
     params: R
 }
 
-export interface IConfig {
+interface IConfig {
     libs?: Array<string>;
     customWorker?: typeof WorkerBody;
 }
 
-export interface IContent {
+interface IContent {
     name: string;
     value: string;
     type: TTypeList;
     isPrototype: boolean;
 }
 
-export interface IHash<T> {
+interface IHash<T> {
     [key: string]: T;
 }
 
-export interface IContentData {
+interface IContentData {
     isSimple: boolean;
     template: string;
 }
 
-export interface IDefer<T> {
+interface IDefer<T> {
     resolve: (data: T) => void;
     reject: (data: any) => void;
 }
 
-export interface IAnyClass<T, R> {
+interface IAnyClass<T, R> {
     new (data: R): T;
 }
 
-export interface IWrapProcess<T> {
+interface IWrapProcess<T> {
     process<P, R>(cb: (item: T, data: P) => Promise<R> | R, data: P): Promise<R>;
 
     process<P, R>(cb: (item: T) => Promise<R> | R): Promise<R>;
@@ -63,7 +85,7 @@ export interface IWrapProcess<T> {
     terminate(): void;
 }
 
-export interface ISimpleWrap {
+interface ISimpleWrap {
     process<P, R>(cb: (data: P) => Promise<R> | R, data: P): Promise<R>;
 
     process<R>(cb: () => Promise<R> | R): Promise<R>;
@@ -71,35 +93,42 @@ export interface ISimpleWrap {
     terminate(): void;
 }
 
-export interface IDefaultMessage {
+interface IDefaultMessage {
     id: string;
 }
 
-export interface IMessage<T> extends MessageEvent {
+interface IMessage<T> extends MessageEvent {
     data: T;
 }
 
-export interface IResponse<T> extends IDefaultMessage {
+interface IResponse<T> extends IDefaultMessage {
     state: boolean;
     body: T;
 }
 
-export interface IAddLibsTask extends IDefaultMessage {
+interface IAddLibsTask extends IDefaultMessage {
     type: MESSAGE_TYPE.ADD_LIBS;
     libs: Array<string>;
 }
 
-export interface IWorkTask extends IDefaultMessage {
+interface IWorkTask extends IDefaultMessage {
     type: MESSAGE_TYPE.WORK;
     params: any;
     job: string;
 }
 
-export interface IAddProcessorTask extends IDefaultMessage {
+interface IAddProcessorTask extends IDefaultMessage {
     type: MESSAGE_TYPE.ADD_PROCESSOR,
     codeData: IContentData;
     params: any;
 }
 
-export type TTask = IAddLibsTask | IWorkTask | IAddProcessorTask;
-export type TTypeList = 'string' | 'number' | 'function' | 'object' | 'boolean' | 'undefined'
+type TTask = IAddLibsTask | IWorkTask | IAddProcessorTask;
+type TTypeList = 'string' | 'number' | 'function' | 'object' | 'boolean' | 'undefined'
+
+declare module 'worker-wrapper' {
+    const main: IMain;
+    export = main;
+}
+
+declare const workerWrapper: IMain;

@@ -2,7 +2,7 @@
   "name": "worker-wrapper",
   "version": "0.1.0",
   "dependencies": {},
-  "typings": "src/WorkerWrapper.ts",
+  "typings": "src/interface.d.ts",
   "repository": {
     "type": "git",
     "url": "https://github.com/tsigel/worker-wrapper"
@@ -29,15 +29,14 @@
     "dist"
   ],
   "scripts": {
+    "build": "npm run clean && npm run compile && npm run browserify && npm run uglify",
+    "clean": "rm -rf dist",
     "compile": "node_modules/.bin/tsc -p ./ && node_modules/.bin/tsc -p ./test && node_modules/.bin/tsc karma.conf.ts",
+    "browserify": "node_modules/.bin/browserify dist/js/index.js -o dist/WorkerWrapper.js -s worker-wrapper",
+    "uglify": "node_modules/.bin/uglifyjs dist/WorkerWrapper.js -o dist/WorkerWrapper.min.js",
     "pretest": "npm run build",
     "test": "node_modules/karma/bin/karma start",
     "test-debug": "node_modules/karma/bin/karma start --singleRun false --autoWatch true",
-    "uglify": "node_modules/.bin/uglifyjs dist/WorkerWrapper.js -o dist/WorkerWrapper.min.js",
-    "browserify": "node_modules/.bin/browserify dist/js/WorkerWrapper.js -o dist/WorkerWrapper.js -s worker-wrapper",
-    "copyInterface": "cp ./src/interface.d.ts dist/js/interface.d.ts",
-    "build": "npm run compile && npm run browserify && npm run uglify && npm run copyInterface",
-    "clean": "rm -rf dist",
     "preversion": "npm run test",
     "postversion": "git push origin HEAD && git push origin HEAD --tags && npm publish"
   }

@@ -1,8 +1,9 @@
-import { IContentData, IWorkAction, TMessage } from './interface';
+import { IAddProcessorTask, IMessage, IResponse, IWorkTask, TTask } from './interface';
 
 
 export const enum MESSAGE_TYPE {
-    INITIALIZE,
+    ADD_LIBS,
+    ADD_PROCESSOR,
     WORK
 }
 
@@ -15,58 +16,71 @@ export class WorkerBody {
     }
 
     protected setHandlers(): void {
-        (self as any).onmessage = (message: TMessage) => {
-            this.onMessage(message);
+        (self as any).onmessage = (message: IMessage<TTask>) => {
+            this.onMessage(message.data);
         };
     }
 
-    protected onMessage(message: TMessage): void {
-        switch (message.data.type) {
-            case MESSAGE_TYPE.INITIALIZE:
-                const url = message.data.url;
-                if (message.data.libs && message.data.libs.length) {
-                    message.data.libs.forEach(lib => (self as any).importScripts(url + lib));
-                }
-                this.createWorkerBody(message.data.contentData);
+    protected onMessage(message: TTask): void {
+
+        switch (message.type) {
+            case MESSAGE_TYPE.ADD_LIBS:
+                this.process(() => this.addLibs(message.libs), message.id);
+                break;
+            case MESSAGE_TYPE.ADD_PROCESSOR:
+                this.process(() => this.addProcessor(message), message.id);
                 break;
             case MESSAGE_TYPE.WORK:
-                this.doWork(message.data);
+                this.doWork(message);
                 break;
         }
     }
 
-    protected send(data: any): void {
-        (self as any).postMessage(data);
+    protected addLibs(libs: Array<string>): void {
+        libs.forEach((lib) => self.importScripts(lib));
     }
 
-    protected doWork(message: IWorkAction): void {
-        try {
-            const processor = eval(`(${message.data.job})`);
-            const result = processor(this.child);
-            if (result && result.then && typeof result.then === 'function') {
-                result.then((data) => {
-                    this.send({ id: message.data.id, result: data });
-                }, (error) => {
-                    this.send({ id: message.data.id, error });
-                });
-            } else {
-                this.send({ id: message.data.id, result });
-            }
-        } catch (e) {
-            this.send({ id: message.data.id, e });
+    protected addProcessor(data: IAddProcessorTask): void {
+        const Child = eval(data.codeData.template);
+        if (data.codeData.isSimple) {
+            this.child = Child;
+        } else {
+            this.child = new Child(data.params);
         }
     }
 
-    protected createWorkerBody(content: IContentData) {
+    protected process(cb: Function, id: string): void {
         try {
-            const Child = eval(content.template);
-            if (content.isSimple) {
-                this.child = Child;
+            cb();
+            this.send({ id, state: true, body: null });
+        } catch (e) {
+            this.send({ id, state: false, body: String(e) });
+        }
+    }
+
+    protected send(data: IResponse<any>): void {
+        try {
+            (self as any).postMessage(data);
+        } catch (e) {
+            debugger;
+        }
+    }
+
+    protected doWork(message: IWorkTask): void {
+        try {
+            const processor = eval(message.job);
+            const result = this.child ? processor(this.child, message.params) : processor(message.params);
+            if (result && result.then && typeof result.then === 'function') {
+                result.then((data) => {
+                    this.send({ id: message.id, state: true, body: data });
+                }, (error) => {
+                    this.send({ id: message.id, state: false, body: error });
+                });
             } else {
-                this.child = new Child();
+                this.send({ id: message.id, state: true, body: result });
             }
         } catch (e) {
-            this.send({ type: 'ERROR', error: e });
+            this.send({ id: message.id, state: false, body: String(e) });
         }
     }
 
