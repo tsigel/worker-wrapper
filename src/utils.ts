@@ -50,6 +50,9 @@ export function stringify(child: any): { template: string; isSimple: boolean } {
 }
 
 export function isSimple(child: any): boolean {
+    if (!child.prototype) {
+        return true;
+    }
     return Object.getOwnPropertyNames(child.prototype).length === 1 && child.prototype.constructor === child;
 }
 
