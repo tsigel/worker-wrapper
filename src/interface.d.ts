@@ -1,7 +1,5 @@
 import { MESSAGE_TYPE, WorkerBody } from './WorkerBody';
 
-declare const workerWrapper: IMain;
-
 export interface IMain {
     create<T, R>(child: IAnyClass<T, R> | T, params: R, options?: Partial<IConfig>): IWrapProcess<T>;
 
