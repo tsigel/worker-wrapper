@@ -39,8 +39,7 @@ Example use worker with class:
 
 ```javascript
 
-class Some {
-    
+class Some { // instance of this class created in worker, your can use jQuery here
     constructor(data) {
         this.data = data;
     }
