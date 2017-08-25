@@ -74,7 +74,7 @@ const wrapper = workerWrapper.create();
 wrapper.process((params) => {
     // This code in worker. Cannot use closure!
     // do some hard work
-    // your can return data or Promise
+    // your can return JSON like data or Promise with JSON like data
     
     return 100; // or return Promise.resolve(100)
 }, params).then((result) => {
