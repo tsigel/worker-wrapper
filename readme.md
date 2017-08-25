@@ -70,7 +70,7 @@ Example simple use:
 
 ```javascript
 
-const wrapper = workerWrapper.create({libs: ['path/to/jquery']});
+const wrapper = workerWrapper.create();
 
 wrapper.process((params) => {
     // This code in worker. Cannot use closure!
@@ -81,6 +81,8 @@ wrapper.process((params) => {
 }, params).then((result) => {
     // result = 100;
 });
+
+wrapper.terminate() // terminate for kill worker process
 
 ```
 
