@@ -11,6 +11,7 @@
   "keywords": [
     "typescript",
     "worker",
+    "web-worker",
     "background",
     "typed"
   ],

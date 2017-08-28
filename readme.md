@@ -12,13 +12,13 @@ npm install worker-wrapper --save
 ```
 For launch in browser:
 ```html
-<script src="node_modules/worker-wrapper/dist/worker-wrapper.min.s"></script>
+<script src="node_modules/worker-wrapper/dist/worker-wrapper.min.js"></script>
 ```
 
 ### API
 
 
-* config(data: {libs?: Array<string>}): void
+* config(data: {libs?: Array\<string\>}): void
 
   The method takes a list of libraries which will connect to the worker if it was not transferred to another config.
   
@@ -33,7 +33,7 @@ For launch in browser:
     
     The parameters that will be passed when creating an instance of the class passed in parameter [code]
     
-    * config: {libs?: Array<string>}
+    * config: {libs?: Array\<string\>}
     
 Example use worker with class:
 
