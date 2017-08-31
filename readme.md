@@ -29,11 +29,17 @@ For launch in browser:
     If the passed class constructor, then its instance will be created in the worker (in this
     case, he will be given [params] arguments)
     
-    * params: any
+    * params: any (JSONLike)
     
     The parameters that will be passed when creating an instance of the class passed in parameter [code]
     
     * config: {libs?: Array\<string\>}
+    
+* interface IWorkerWrapper
+
+    * process(cb, [data]): Promise;
+    * terminate(): void;
+    
     
 Example use worker with class:
 

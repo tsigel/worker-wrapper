@@ -1,11 +1,11 @@
 interface IMain {
-    create<T, R>(child: IAnyClass<T, R> | T, params: R, options?: Partial<IConfig>): IWrapProcess<T>;
+    create<T, R>(child: IAnyClass<T, R> | ICallback<R, T>, params: R, options?: Partial<IConfig>): IWrapProcess<T>;
 
-    create<T>(child: IAnyClass<T, void> | T, options?: Partial<IConfig>): IWrapProcess<T>;
+    create<T>(child: IAnyClass<T, void> | ICallback<void, T>, options?: Partial<IConfig>): IWrapProcess<T>;
 
-    create<T, R>(child: IAnyClass<T, R> | T, params: R): IWrapProcess<T>;
+    create<T, R>(child: IAnyClass<T, R> | ICallback<R, T>, params: R): IWrapProcess<T>;
 
-    create<T>(child: IAnyClass<T, void> | T): IWrapProcess<T>;
+    create<T>(child: IAnyClass<T, void> | ICallback<void, T>): IWrapProcess<T>;
 
     create(options: Partial<IConfig>): ISimpleWrap;
 
@@ -121,6 +121,11 @@ interface IAddProcessorTask extends IDefaultMessage {
     type: MESSAGE_TYPE.ADD_PROCESSOR,
     codeData: IContentData;
     params: any;
+}
+
+
+interface ICallback<P, R> {
+    (data: P): R;
 }
 
 type TTask = IAddLibsTask | IWorkTask | IAddProcessorTask;

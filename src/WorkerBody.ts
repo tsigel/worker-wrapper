@@ -43,7 +43,7 @@ export class WorkerBody {
     protected addProcessor(data: IAddProcessorTask): void {
         const Child = eval(data.codeData.template);
         if (data.codeData.isSimple) {
-            this.child = Child;
+            this.child = Child(data.params);
         } else {
             this.child = new Child(data.params);
         }

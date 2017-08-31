@@ -40,6 +40,6 @@
     "test": "node_modules/karma/bin/karma start",
     "test-debug": "node_modules/karma/bin/karma start --singleRun false --autoWatch true",
     "preversion": "npm run test",
-    "postversion": "git push origin HEAD && git push origin HEAD --tags && npm publish"
+    "postversion": "git push origin HEAD && git push origin HEAD --tags && npm run build && npm publish"
   }
 }

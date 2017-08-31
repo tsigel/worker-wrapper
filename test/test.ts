@@ -28,8 +28,8 @@ describe('WorkerWrapper', () => {
                 }, 500);
             });
         });
-        wrapper.process((myFunc) => {
-            return myFunc();
+        wrapper.process((promise) => {
+            return promise;
         }).then((data) => {
             expect(data).to.be.ok();
             done();
@@ -40,8 +40,8 @@ describe('WorkerWrapper', () => {
         const wrapper = workerWrapper.create(() => {
             return 1;
         });
-        wrapper.process((myFunc) => {
-            return myFunc();
+        wrapper.process((data) => {
+            return data;
         }).then((data) => {
             expect(data).to.be.ok();
             done();
@@ -56,8 +56,8 @@ describe('WorkerWrapper', () => {
                 }, 500);
             });
         });
-        wrapper.process((myFunc) => {
-            return myFunc();
+        wrapper.process((promise) => {
+            return promise;
         }).catch((data) => {
             expect(data).to.be.ok();
             done();
@@ -73,8 +73,8 @@ describe('WorkerWrapper', () => {
             libs: ['/base/test/lib.js']
         });
 
-        worker.process((myFunc) => {
-            return myFunc();
+        worker.process((promise) => {
+            return promise;
         }).then((text: string) => {
             expect(text).to.be('test');
             done();
