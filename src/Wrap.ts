@@ -9,11 +9,13 @@ export class Wrap<T, R> implements ISimpleWrap, IWrapProcess<T> {
     private readonly _worker: Worker;
     private readonly _actionsHash: IHash<IDefer<any>>;
     private readonly _ready: Promise<boolean>;
+    private readonly _stringifyMode: boolean;
 
 
-    constructor(worker: Worker, classData?: IWorkerClassData<T, R>, libs?: Array<string>,) {
+    constructor(worker: Worker, classData: IWorkerClassData<T, R>, libs: Array<string>, stringifyMode: boolean) {
         this._worker = worker;
         this._actionsHash = Object.create(null);
+        this._stringifyMode = stringifyMode;
 
         this._setHandlers();
 
@@ -49,23 +51,41 @@ export class Wrap<T, R> implements ISimpleWrap, IWrapProcess<T> {
     private _setHandlers(): void {
         this._worker.onmessage = (e: IMessage<IResponse<any>>) => {
             this._onMessage(e.data);
-        }
+        };
     }
 
     private _onMessage(data: IResponse<any>): void {
+        if (this._stringifyMode) {
+            data = JSON.parse(data as any);
+        }
         if (!data.id) {
             throw new Error(data as any);
         }
         const method = data.state ? 'resolve' : 'reject';
         this._actionsHash[data.id][method](data.body);
+        delete this._actionsHash[data.id];
     }
 
     private _sendMessage(body: Partial<TTask>): Promise<any> {
+        const id = `${Date.now()}-${Math.random()}`;
         return new Promise((resolve, reject) => {
-            const id = `${Date.now()}-${Math.random()}`;
             this._actionsHash[id] = { resolve, reject };
-            this._worker.postMessage({ ...body, id });
+            try {
+                this._worker.postMessage(this._getSendData(body, id));
+            } catch (e) {
+                console.error(e);
+                reject(e);
+            }
         });
+    }
+
+    private _getSendData(body: Partial<TTask>, id) {
+        const data = { ...body, id };
+        if (this._stringifyMode) {
+            return JSON.stringify(data);
+        } else {
+            return data;
+        }
     }
 
     private _addLibs(libs?: Array<string>): Promise<boolean> {

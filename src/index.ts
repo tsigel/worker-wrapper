@@ -8,7 +8,8 @@ class Main implements IMain {
 
     private _options: IConfig = {
         libs: [],
-        customWorker: WorkerBody
+        customWorker: WorkerBody,
+        stringifyMode: false
     };
 
     public config(options: Partial<IConfig>): void {
@@ -45,14 +46,14 @@ class Main implements IMain {
         options = options || Object.create(null);
 
         const myOptions = { ...this._options, ...options };
-        const worker = this._createWorker(myOptions.customWorker);
+        const worker = this._createWorker(myOptions.customWorker, myOptions.stringifyMode);
 
-        return new Wrap(worker, { child: processor, params }, myOptions.libs);
+        return new Wrap(worker, { child: processor, params }, myOptions.libs, myOptions.stringifyMode);
     }
 
-    private _createWorker(customWorker): Worker {
+    private _createWorker(customWorker: typeof WorkerBody, stringifyMode: boolean): Worker {
         const codeData = stringify(customWorker);
-        const template = `var MyWorker = ${codeData.template} ;new MyWorker()`;
+        const template = `var MyWorker = ${codeData.template} ;new MyWorker(${stringifyMode})`;
 
         const blob = new Blob([template], { type: 'application/javascript' });
         return new Worker(URL.createObjectURL(blob));

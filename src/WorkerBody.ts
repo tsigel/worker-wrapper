@@ -9,15 +9,18 @@ export const enum MESSAGE_TYPE {
 
 export class WorkerBody {
 
+    private readonly _stringifyMode: boolean;
     private child: any;
 
-    constructor() {
+
+    constructor(stringifyMode: boolean) {
+        this._stringifyMode = stringifyMode;
         this.setHandlers();
     }
 
     protected setHandlers(): void {
         (self as any).onmessage = (message: IMessage<TTask>) => {
-            this.onMessage(message.data);
+            this.onMessage(this._stringifyMode ? JSON.parse(message.data as any) : message.data);
         };
     }
 
@@ -60,9 +63,14 @@ export class WorkerBody {
 
     protected send(data: IResponse<any>): void {
         try {
-            (self as any).postMessage(data);
+            (self as any).postMessage(this._stringifyMode ? JSON.stringify(data) : data);
         } catch (e) {
-            debugger;
+            const toSet = {
+                id: data.id,
+                state: false,
+                body: String(e)
+            };
+            (self as any).postMessage(this._stringifyMode ? JSON.stringify(toSet) : toSet);
         }
     }
 
@@ -74,6 +82,9 @@ export class WorkerBody {
                 result.then((data) => {
                     this.send({ id: message.id, state: true, body: data });
                 }, (error) => {
+                    if (error instanceof Error) {
+                        error = String(error);
+                    }
                     this.send({ id: message.id, state: false, body: error });
                 });
             } else {

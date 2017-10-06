@@ -50,6 +50,7 @@ interface IWorkerClassData<T, R> {
 interface IConfig {
     libs?: Array<string>;
     customWorker?: typeof WorkerBody;
+    stringifyMode?: boolean;
 }
 
 interface IContent {

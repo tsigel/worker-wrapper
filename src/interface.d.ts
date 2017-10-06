@@ -26,6 +26,7 @@ export interface IWorkerClassData<T, R> {
 export interface IConfig {
     libs?: Array<string>;
     customWorker?: typeof WorkerBody;
+    stringifyMode?: boolean;
 }
 
 export interface IContent {
