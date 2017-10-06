@@ -1,6 +1,6 @@
 {
   "name": "worker-wrapper",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "dependencies": {},
   "typings": "src/interface.d.ts",
   "main": "dist/WorkerWrapper.min.js",
