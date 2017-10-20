@@ -1,4 +1,6 @@
 import { WorkerBody } from './WorkerBody';
+import { Jsonify } from './Jsonify';
+import { Jsonify } from './Parser';
 import { IAnyClass, IConfig, IMain } from './interface';
 import { stringify } from './utils';
 import { Wrap } from './Wrap';

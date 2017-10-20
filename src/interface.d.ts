@@ -1,4 +1,5 @@
 import { MESSAGE_TYPE, WorkerBody } from './WorkerBody';
+import { DATA_TYPES } from './utils';
 
 export interface IMain {
     create<T, R>(child: IAnyClass<T, R> | ICallback<R, T>, params: R, options?: Partial<IConfig>): IWrapProcess<T>;
@@ -103,6 +104,38 @@ export interface IAddProcessorTask extends IDefaultMessage {
 export interface ICallback<P, R> {
     (data: P): R;
 }
+
+export interface Ijsonify {
+    data: any;
+    classes: Array<IjsonifyClass>;
+    paths: Array<TjsonifyPath>;
+}
+
+export interface IjsonifyClass {
+    name: string;
+    value: string;
+}
+
+export interface IjsonifyPathFunction {
+    type: DATA_TYPES.FUNCTION,
+    path: string;
+    value: string;
+}
+
+export interface IjsonifyPathClass {
+    type: DATA_TYPES.CLASS,
+    path: string;
+    name: string;
+}
+
+export interface IjsonifyPathInstance {
+    type: DATA_TYPES.INSTANCE,
+    path: string;
+    value: Object;
+    name: string;
+}
+
+export type TjsonifyPath = IjsonifyPathFunction | IjsonifyPathInstance | IjsonifyPathClass;
 
 export type TTask = IAddLibsTask | IWorkTask | IAddProcessorTask;
 export type TTypeList = 'string' | 'number' | 'function' | 'object' | 'boolean' | 'undefined'

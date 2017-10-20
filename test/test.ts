@@ -55,6 +55,16 @@ describe('WorkerWrapper', () => {
                 });
             });
 
+            it('simple function with function param', (done) => {
+                workerWrapper.create().process(({ cb, data }) => {
+                    return cb(data);
+                }, { cb: (data) => data.test, data: { test: 'test' } })
+                    .then((res) => {
+                        expect(res).to.be('test');
+                        done();
+                    });
+            });
+
             it('simple function with reject', (done) => {
                 const wrapper = workerWrapper.create(() => {
                     return new Promise((resolve, reject) => {
@@ -117,10 +127,36 @@ describe('WorkerWrapper', () => {
 
                 }
 
+                class TestWithObjectInPrototype {
+
+                    public testData;
+
+                    public test() {
+                        return this.testData.test();
+                    }
+
+                }
+
+                TestWithObjectInPrototype.prototype.testData = {
+                    test: function () {
+                        return 'test';
+                    }
+                };
+
                 it('simple class', (done) => {
                     const worker = workerWrapper.create(Test);
                     worker.process((test) => {
                         return Promise.resolve(test.getTest());
+                    }).then((text) => {
+                        expect(text).to.be('test');
+                        done();
+                    });
+                });
+
+                it('simple class with object in prototype', (done) => {
+                    const worker = workerWrapper.create(TestWithObjectInPrototype);
+                    worker.process((test) => {
+                        return test.test();
                     }).then((text) => {
                         expect(text).to.be('test');
                         done();
