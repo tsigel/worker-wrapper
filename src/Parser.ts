@@ -13,7 +13,7 @@ export class Parser {
     public parse(data: Ijsonify): any {
         data.classes.forEach(this._addClassData, this);
 
-        if (!data.data) {
+        if (!data.data && data.paths.length) {
             data.data = this._getPathData(data.paths.shift());
         }
 

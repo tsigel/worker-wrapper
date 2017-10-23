@@ -1,7 +1,8 @@
 import { MESSAGE_TYPE } from './WorkerBody';
 
 import { IDefer, IHash, IMessage, IResponse, ISimpleWrap, IWorkerClassData, IWrapProcess, TTask } from './interface';
-import { stringify } from './utils';
+import { Jsonifier } from './Jsonifier';
+import { Parser } from './Parser';
 
 
 export class Wrap<T, R> implements ISimpleWrap, IWrapProcess<T> {
@@ -10,12 +11,16 @@ export class Wrap<T, R> implements ISimpleWrap, IWrapProcess<T> {
     private readonly _actionsHash: IHash<IDefer<any>>;
     private readonly _ready: Promise<boolean>;
     private readonly _stringifyMode: boolean;
+    private readonly _jsonify: Jsonifier;
+    private readonly _parser: Parser;
 
 
     constructor(worker: Worker, classData: IWorkerClassData<T, R>, libs: Array<string>, stringifyMode: boolean) {
         this._worker = worker;
         this._actionsHash = Object.create(null);
         this._stringifyMode = stringifyMode;
+        this._jsonify = new Jsonifier();
+        this._parser = new Parser();
 
         this._setHandlers();
 
@@ -26,6 +31,7 @@ export class Wrap<T, R> implements ISimpleWrap, IWrapProcess<T> {
             return args.every(Boolean);
         }).catch((e) => {
             this.terminate();
+            console.error(e);
             throw new Error(e);
         });
     }
@@ -34,8 +40,8 @@ export class Wrap<T, R> implements ISimpleWrap, IWrapProcess<T> {
         return this._ready.then(() => {
             return this._sendMessage({
                 type: MESSAGE_TYPE.WORK,
-                params: params,
-                job: stringify(cb).template
+                params: this._jsonify.toJSON(params),
+                job: Jsonifier.toStringFunction(cb)
             });
         });
     }
@@ -62,7 +68,7 @@ export class Wrap<T, R> implements ISimpleWrap, IWrapProcess<T> {
             throw new Error(data as any);
         }
         const method = data.state ? 'resolve' : 'reject';
-        this._actionsHash[data.id][method](data.body);
+        this._actionsHash[data.id][method](this._parser.parse(data.body));
         delete this._actionsHash[data.id];
     }
 
@@ -109,7 +115,7 @@ export class Wrap<T, R> implements ISimpleWrap, IWrapProcess<T> {
 
         return this._sendMessage({
             type: MESSAGE_TYPE.ADD_PROCESSOR,
-            codeData: stringify(classData.child),
+            codeData: Jsonifier.stringify(classData.child),
             params: classData.params
         });
     }

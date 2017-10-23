@@ -1,16 +1,15 @@
-import { WorkerBody } from './WorkerBody';
-import { Jsonify } from './Jsonify';
-import { Jsonify } from './Parser';
+import { getWorkerBody } from './WorkerBody';
 import { IAnyClass, IConfig, IMain } from './interface';
-import { stringify } from './utils';
+import { Jsonifier } from './Jsonifier';
 import { Wrap } from './Wrap';
+import { Parser } from './Parser';
 
 
 class Main implements IMain {
 
     private _options: IConfig = {
         libs: [],
-        customWorker: WorkerBody,
+        customWorker: getWorkerBody(Jsonifier, Parser),
         stringifyMode: false
     };
 
@@ -54,8 +53,8 @@ class Main implements IMain {
     }
 
     private _createWorker(customWorker: typeof WorkerBody, stringifyMode: boolean): Worker {
-        const codeData = stringify(customWorker);
-        const template = `var MyWorker = ${codeData.template} ;new MyWorker(${stringifyMode})`;
+        const content = Jsonifier.createTemplate(customWorker, [Jsonifier, Parser]);
+        const template = `var MyWorker = ${content}; new MyWorker(${stringifyMode})`;
 
         const blob = new Blob([template], { type: 'application/javascript' });
         return new Worker(URL.createObjectURL(blob));

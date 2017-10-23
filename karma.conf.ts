@@ -8,15 +8,15 @@ module.exports = function (config) {
 
         // frameworks to use
         // available frameworks: https://npmjs.org/browse/keyword/karma-adapter
-        frameworks: ["mocha"],
+        frameworks: ['mocha'],
         // list of files / patterns to load in the browser
         files: [
-            { pattern: "node_modules/expect.js/index.js" },
-            { pattern: "dist/WorkerWrapper.js" },
-            { pattern: "src/**.ts", included: false },
-            { pattern: "test/**.ts", included: false },
-            { pattern: "test/*.js.map", included: false },
-            { pattern: "test/**/*.js" },
+            { pattern: 'node_modules/expect.js/index.js' },
+            { pattern: 'dist/WorkerWrapper.js' },
+            { pattern: 'src/**.ts', included: false },
+            { pattern: 'test/**.ts', included: false },
+            { pattern: 'test/*.js.map', included: false },
+            { pattern: 'test/**/*.js' },
         ],
 
         // list of files to exclude
@@ -29,7 +29,7 @@ module.exports = function (config) {
         // test results reporter to use
         // possible values: 'dots', 'progress'
         // available reporters: https://npmjs.org/browse/keyword/karma-reporter
-        reporters: ["progress"],
+        reporters: ['progress'],
 
         // web server port
         port: 9876,
@@ -47,7 +47,7 @@ module.exports = function (config) {
 
         // start these browsers
         // available browser launchers: https://npmjs.org/browse/keyword/karma-launcher
-        browsers: ["Chrome"],
+        browsers: ['Chrome'],
 
         // Continuous Integration mode
         // if true, Karma captures browsers, runs the tests and exits

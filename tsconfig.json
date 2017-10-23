@@ -3,7 +3,7 @@
     "target": "es5",
     "sourceMap": true,
     "declaration": true,
-    "module": "amd",
+    "module": "umd",
     "outDir": "dist/js",
     "lib": [
       "es2015.promise",

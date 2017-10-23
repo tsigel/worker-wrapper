@@ -1,4 +1,4 @@
-import { MESSAGE_TYPE, WorkerBody } from './WorkerBody';
+import { MESSAGE_TYPE } from './WorkerBody';
 import { DATA_TYPES } from './utils';
 
 export interface IMain {
@@ -26,7 +26,7 @@ export interface IWorkerClassData<T, R> {
 
 export interface IConfig {
     libs?: Array<string>;
-    customWorker?: typeof WorkerBody;
+    customWorker?: any;
     stringifyMode?: boolean;
 }
 

@@ -153,12 +153,32 @@ describe('WorkerWrapper', () => {
                     });
                 });
 
-                it('simple class with object in prototype', (done) => {
-                    const worker = workerWrapper.create(TestWithObjectInPrototype);
-                    worker.process((test) => {
-                        return test.test();
-                    }).then((text) => {
-                        expect(text).to.be('test');
+                it('transfer instance', (done) => {
+                    const worker = workerWrapper.create();
+                    worker.process(() => {
+
+                        class WorkerClassInstance {
+
+                            test() {
+                                return 'test';
+                            }
+
+                        }
+
+                        return new WorkerClassInstance();
+
+                    }).then((item) => {
+                        expect(item.test()).to.be('test');
+                        done();
+                    });
+                });
+
+                it('get empty data from worker', (done) => {
+                    const worker = workerWrapper.create();
+                    worker.process(() => {
+                        return { test: null };
+                    }).then((item) => {
+                        expect(item.test).to.be(null);
                         done();
                     });
                 });

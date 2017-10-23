@@ -1,8 +1,7 @@
 import { IHash, Ijsonify, IjsonifyClass, IContent, TTypeList } from './interface';
 import { DATA_TYPES } from './utils';
 
-
-export class Jsonify {
+export class Jsonifier {
 
     private _classes: IHash<string>;
 
@@ -16,6 +15,11 @@ export class Jsonify {
             classes: [],
             paths: []
         };
+
+        if (!data) {
+            result.data = data;
+            return result;
+        }
 
         switch (typeof data) {
             case 'object':
@@ -33,6 +37,36 @@ export class Jsonify {
         }
 
         return result;
+    }
+
+    public static stringify(data: any): IContentData {
+        const isSimple = Jsonifier._isFunction(data);
+        if (isSimple) {
+            return { isSimple, template: Jsonifier.toStringFunction(data) };
+        } else {
+            return { isSimple, template: Jsonifier._wrapClass(data) };
+        }
+    }
+
+    public static createTemplate(Class, dependency: Array<any>): string {
+        const originName = Jsonifier._getFnName(Class);
+
+        let content = '';
+
+        dependency.forEach((Class) => {
+            content += Jsonifier._toStringClass(Class) + '\n';
+        });
+
+        content += Jsonifier._toStringClass(Class) + '\n';
+        content += `return ${originName}`;
+
+        return `(function () {\n${content}\n})()`;
+    }
+
+    public static toStringFunction(func): string {
+        let template = '(function () {\n';
+        template += `   return ${String(func)}})();`;
+        return template;
     }
 
     private _addJSONObject(path: string, json: Ijsonify, data: any) {
@@ -56,10 +90,14 @@ export class Jsonify {
                     this._addJSONFunction(path ? `${path}.${key}` : key, json, item);
                     break;
                 case 'object':
-                    if (this._isInstance(item)) {
-                        delete data[key];
+                    if (!item) {
+                        data[key] = item;
+                    } else {
+                        if (this._isInstance(item)) {
+                            delete data[key];
+                        }
+                        this._addJSONObject(path ? `${path}.${key}` : key, json, item);
                     }
-                    this._addJSONObject(path ? `${path}.${key}` : key, json, item);
             }
         });
         return data;
@@ -70,8 +108,8 @@ export class Jsonify {
         let value;
         let name;
 
-        if (this._isFunction(func)) {
-            value = this._toStringFunction(func);
+        if (Jsonifier._isFunction(func)) {
+            value = Jsonifier.toStringFunction(func);
             type = DATA_TYPES.FUNCTION;
         } else {
             const classes = this._toStringClass(func);
@@ -103,20 +141,6 @@ export class Jsonify {
         }
     }
 
-    //TODO fix is function by function code or some
-    private _isFunction(child: any): boolean {
-        if (!child.prototype) {
-            return true;
-        }
-        return Object.getOwnPropertyNames(child.prototype).length === 1 && this._getClassParents(child).length === 1;
-    }
-
-    private _toStringFunction(func): string {
-        let template = '(function () {\n';
-        template += `   return ${String(func)}})();`;
-        return template;
-    }
-
     private _isInstance(some: any): boolean {
         const constructor = some.constructor;
 
@@ -136,36 +160,54 @@ export class Jsonify {
     }
 
     private _toStringClass(rootConstructor): Array<{ name: string, value: string }> {
-        return this._getClassParents(rootConstructor).map((item, i, list) => {
-            const _super = list[i - 1];
-            return { name: this._getFnName(item), value: this._toStringTartetClass(item, _super) };
+        return Jsonifier._getClassParents(rootConstructor).map((item, i, list) => {
+            const parent = list[i - 1];
+            return { name: Jsonifier._getFnName(item), value: this._toStringTartetClass(item, parent) };
         });
     }
 
     private _toStringTartetClass(target: any, parent: any): string {
-        const targetName = this._getFnName(target);
+        const targetName = Jsonifier._getFnName(target);
         if (this._classes[targetName]) {
             return this._classes[targetName];
         }
 
-        let template = '(function () {\n';
+        const template = Jsonifier._wrapClass(target);
+        this._classes[targetName] = template;
+        return template;
+    }
 
-        let Constructor = String(target) + ';';
+    private static _wrapClass(constructor) {
+        const name = Jsonifier._getFnName(constructor);
+        return `(function () {\n${Jsonifier._toStringClass(constructor)}\n return ${name}})();`;
+    }
+
+    private static _toStringClass(data) {
+        return Jsonifier._getClassParents(data).reduce((template, item, index, list) => {
+            return template + Jsonifier._toStringCurrentClass(item, list[index - 1]);
+        }, '');
+    }
+
+    public static _toStringCurrentClass(constructor, parent) {
+        const targetName = Jsonifier._getFnName(constructor);
+        let template = '';
+
+        let Constructor = String(constructor) + ';';
 
         if (Constructor.indexOf(`class ${targetName}`) === 0) {
             template += Constructor;
         } else {
 
-            template += `   var ${targetName} = ${this._processSuper(Constructor, parent, false)}` + '\n';
+            template += `var ${targetName} = ${Jsonifier._processSuper(Constructor, parent, false)}` + '\n';
             if (parent) {
                 template += `   ${targetName}.prototype = new ${this._getFnName(parent)}();` + '\n';
                 template += `   ${targetName}.prototype.constructor = ${targetName};` + '\n';
             }
 
-            this._getContent(target.prototype, true)
-                .concat(this._getContent(target, false))
+            Jsonifier._getContent(constructor.prototype, true)
+                .concat(Jsonifier._getContent(constructor, false))
                 .forEach((content) => {
-                    const value = this._processSuper(content.value, parent, content.isPrototype);
+                    const value = Jsonifier._processSuper(content.value, parent, content.isPrototype);
                     if (content.isPrototype) {
                         template += `   ${targetName}.prototype.${content.name} = ${value};` + '\n';
                     } else {
@@ -174,12 +216,21 @@ export class Jsonify {
                 });
         }
 
-        template += `   return ${targetName};\n})()` + '\n';
-        this._classes[targetName] = template;
         return template;
     }
 
-    private _getClassParents(constructor): Array<any> {
+    private static _processSuper(content: string, parent: any, isPrototype: boolean): string {
+        const reg = /\b(_super)\b/g;
+        return parent && parent.name && content.replace(reg, function () {
+            if (isPrototype) {
+                return `${parent.name}.prototype`;
+            } else {
+                return parent.name;
+            }
+        }) || content;
+    }
+
+    private static _getClassParents(constructor): Array<any> {
         const result = [constructor];
         let tmp = constructor;
         let item = Object.getPrototypeOf(tmp);
@@ -193,23 +244,20 @@ export class Jsonify {
         return result.reverse();
     }
 
-    private _getFnName(fn): string {
+    //TODO fix is function by function code or some
+    private static _isFunction(child: any): boolean {
+        if (!child.prototype) {
+            return true;
+        }
+        return Object.getOwnPropertyNames(child.prototype).length === 1 && Jsonifier._getClassParents(child).length === 1;
+    }
+
+    private static _getFnName(fn): string {
         const s = ((fn.name && ['', fn.name]) || fn.toString().match(/function ([^\(]+)/));
         return (s && s[1] || 'anonymous');
     }
 
-    private _processSuper(content: string, parent: any, isPrototype: boolean): string {
-        const reg = /\b(_super)\b/g;
-        return content.replace(reg, function () {
-            if (isPrototype) {
-                return `${parent.name}.prototype`;
-            } else {
-                return parent.name;
-            }
-        });
-    }
-
-    private _getContent(content, isPrototype: boolean): Array<IContent> {
+    private static _getContent(content, isPrototype: boolean): Array<IContent> {
         return Object.keys(content || {})
             .filter((name) => name !== 'constructor')
             .map((name) => {
