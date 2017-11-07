@@ -62,14 +62,24 @@ export class Parser {
     }
 
     private _addClassData(classData: IjsonifyClass) {
+        //TODO Add safe mode for compile classes!
         if (!this._classes[classData.name]) {
-            this._classes[classData.name] = this._parseFunc(classData.value);
-            self[classData.name] = this._classes[classData.name];
+            const root = Parser._getRoot();
+            if (root[classData.name]) {
+                this._classes[classData.name] = root[classData.name];
+            } else {
+                this._classes[classData.name] = this._parseFunc(classData.value);
+                root[classData.name] = this._classes[classData.name];
+            }
         }
     }
 
     private _parseFunc(template: string): any {
         return eval(template);
+    }
+
+    private static _getRoot(): any {
+        return self;
     }
 
 }
