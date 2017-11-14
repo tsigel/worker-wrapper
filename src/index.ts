@@ -13,6 +13,12 @@ class Main implements IMain {
         stringifyMode: false
     };
 
+    public classes = {
+        Jsonifier: Jsonifier,
+        Parser: Parser,
+        WorkerBody: getWorkerBody(Jsonifier, Parser)
+    };
+
     public config(options: Partial<IConfig>): void {
         this._options = { ...this._options, ...options };
     }
