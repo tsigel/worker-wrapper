@@ -1,85 +1,74 @@
-import { Ijsonify, IjsonifyClass, IjsonifyPathInstance, TjsonifyPath } from './interface';
-import { DATA_TYPES } from './utils';
+import { IClassData, ISerialized, TSerializedDataITem } from './Serializer';
+import { TAnyFunction } from './utils/interface';
 
 
 export class Parser {
 
-    private _classes: IHash<any>;
+    private readonly _classes: Record<string, any>;
 
     constructor() {
         this._classes = Object.create(null);
     }
 
-    public parse(data: Ijsonify): any {
+    public parse(data: ISerialized): any {
         data.classes.forEach(this._addClassData, this);
 
-        if (!data.data && data.paths.length) {
-            data.data = this._getPathData(data.paths.shift());
-        }
+        const loop = (item: any): any => {
 
-        this._fill(data.data, data.paths);
+        };
 
-        return data.data;
-    }
+        if (Parser.isSerializedField(data.data)) {
+            return data.data = this._parseSerializedItem(data.data, data.classes);
+        } else {
 
-    private _fill(data: any, paths: Array<TjsonifyPath>): void {
-        paths.forEach((path) => {
-            this._set(data, path.path, this._getPathData(path));
-        });
-    }
-
-    private _set(target, path, data): void {
-        let tmp = target;
-        path.split('.').forEach((part, index, list) => {
-            if (index === list.length - 1) {
-                tmp[part] = data;
-            } else {
-                if (!tmp[part]) {
-                    tmp[part] = Object.create(null);
-                }
-                tmp = tmp[part];
-            }
-        });
-    }
-
-    private _getPathData(path: TjsonifyPath): any {
-        switch (path.type) {
-            case DATA_TYPES.CLASS:
-                return this._classes[path.name];
-            case DATA_TYPES.FUNCTION:
-                return this._parseFunc(path.value);
-            case DATA_TYPES.INSTANCE:
-                return this._parseInstance(path);
         }
     }
 
-    private _parseInstance(path: IjsonifyPathInstance): any {
-        const instance = Object.create(this._classes[path.name].prototype);
-        Object.keys(path.value || {}).forEach((key) => {
-            instance[key] = path.value[key];
+    private _parseSerializedItem(data: TSerializedDataITem, classes: Array<IClassData>): any {
+        // TODO need refactor
+        switch (data.__type) {
+            case 'serialized-class':
+                return this._parseFunc(classes[data.index].template);
+            case 'serialized-function':
+                return this._parseFunc(data.template);
+            case 'serialized-instance':
+                return this._parseInstance(data.data, this._parseFunc(classes[data.index].template));
+        }
+    }
+
+    private _parseInstance(data: any, Factory: TAnyFunction): any {
+        const instance = Object.create(Factory.prototype);
+        Object.entries(data || {}).forEach(([key, value]) => {
+            instance[key] = value;
         });
         return instance;
     }
 
-    private _addClassData(classData: IjsonifyClass) {
+    private _addClassData(classData: IClassData) {
         //TODO Add safe mode for compile classes!
         if (!this._classes[classData.name]) {
             const root = Parser._getRoot();
             if (root[classData.name]) {
                 this._classes[classData.name] = root[classData.name];
             } else {
-                this._classes[classData.name] = this._parseFunc(classData.value);
+                this._classes[classData.name] = this._parseFunc(classData.template);
                 root[classData.name] = this._classes[classData.name];
             }
         }
     }
 
     private _parseFunc(template: string): any {
+        // TODO need create without eval
+        // TODO need cache and queue
         return eval(template);
     }
 
     private static _getRoot(): any {
         return self;
+    }
+
+    private static isSerializedField(data: any): data is TSerializedDataITem {
+        return data && '__type' in data && ['serialized-function', 'serialized-class', 'serialized-instance'].indexOf(data.__type) !== -1;
     }
 
 }

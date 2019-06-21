@@ -1,3 +1,5 @@
+import { DATA_TYPES } from './src/utils';
+
 interface IMain {
     create<T, R>(child: IAnyClass<T, R> | ICallback<R, T>, params: R, options?: Partial<IConfig>): IWrapProcess<T>;
 
@@ -65,7 +67,7 @@ interface IHash<T> {
 }
 
 interface IContentData {
-    isSimple: boolean;
+    type: DATA_TYPES.FUNCTION | DATA_TYPES.CLASS;
     template: string;
 }
 
@@ -75,7 +77,7 @@ interface IDefer<T> {
 }
 
 interface IAnyClass<T, R> {
-    new (data: R): T;
+    new(data: R): T;
 }
 
 interface IWrapProcess<T> {

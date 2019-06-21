@@ -46,7 +46,7 @@ export function getWorkerBody(Jsonifier, Parser): any {
         }
 
         protected addLibs(libs: Array<string>): void {
-            libs.forEach((lib) => self.importScripts(lib));
+            libs.forEach((lib) => (self as any).importScripts(lib));
         }
 
         protected addProcessor(data: IAddProcessorTask): void {

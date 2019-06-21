@@ -42,7 +42,7 @@ export interface IHash<T> {
 }
 
 export interface IContentData {
-    isSimple: boolean;
+    type: DATA_TYPES.FUNCTION | DATA_TYPES.CLASS;
     template: string;
 }
 

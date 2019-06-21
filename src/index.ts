@@ -1,6 +1,6 @@
 import { getWorkerBody } from './WorkerBody';
 import { IAnyClass, IConfig, IMain } from './interface';
-import { Jsonifier } from './Jsonifier';
+import { Serializer } from './Serializer';
 import { Wrap } from './Wrap';
 import { Parser } from './Parser';
 
@@ -9,14 +9,14 @@ class Main implements IMain {
 
     private _options: IConfig = {
         libs: [],
-        customWorker: getWorkerBody(Jsonifier, Parser),
+        customWorker: getWorkerBody(Serializer, Parser),
         stringifyMode: false
     };
 
     public classes = {
-        Jsonifier: Jsonifier,
+        Serializer: Serializer,
         Parser: Parser,
-        WorkerBody: getWorkerBody(Jsonifier, Parser)
+        WorkerBody: getWorkerBody(Serializer, Parser)
     };
 
     public config(options: Partial<IConfig>): void {
@@ -58,7 +58,7 @@ class Main implements IMain {
         return new Wrap(worker, { child: processor, params }, myOptions.libs, myOptions.stringifyMode);
     }
 
-    private _createWorker(customWorker: typeof WorkerBody, stringifyMode: boolean): Worker {
+    private _createWorker(customWorker: IWorkerBodyConstructor, stringifyMode: boolean): Worker {
         const content = Jsonifier.createTemplate(customWorker, [Jsonifier, Parser]);
         const template = `var MyWorker = ${content}; new MyWorker(${stringifyMode})`;
 

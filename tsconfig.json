@@ -1,13 +1,16 @@
 {
   "compilerOptions": {
+    "strict": true,
     "target": "es5",
     "sourceMap": true,
     "declaration": true,
-    "module": "umd",
+    "module": "commonjs",
     "outDir": "dist/js",
     "lib": [
       "es2015.promise",
+      "es2015",
       "es5",
+      "es2017.object",
       "webworker"
     ],
     "typeRoots": [

@@ -1,0 +1,1 @@
+export type TAnyFunction = (...args: Array<any>) => any;
