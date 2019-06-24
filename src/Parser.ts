@@ -4,7 +4,9 @@ import { TAnyFunction } from './utils/interface';
 
 export class Parser {
 
-    private readonly _classes: Record<string, any>;
+    private readonly _classes: Record<string, any> = Object.create(null);
+    private _cache: Array<{ code: string; compiled: any }> = [];
+    private static _canUseUrl: boolean = true;
 
     constructor() {
         this._classes = Object.create(null);
@@ -14,14 +16,30 @@ export class Parser {
         data.classes.forEach(this._addClassData, this);
 
         const loop = (item: any): any => {
+            if (Parser._isSerializedField(data.data)) {
+                return this._parseSerializedItem(data.data, data.classes);
+            }
 
+            if (Array.isArray(item)) {
+                return item.map(loop);
+            }
+
+            if (!item) {
+                return item;
+            }
+
+            if (typeof item !== 'object') {
+                return item;
+            }
+
+            return Object.entries(item)
+                .reduce(
+                    (acc, [key, value]) => Object.assign(acc, { [key]: loop(value) }),
+                    {}
+                );
         };
 
-        if (Parser.isSerializedField(data.data)) {
-            return data.data = this._parseSerializedItem(data.data, data.classes);
-        } else {
-
-        }
+        return loop(data.data);
     }
 
     private _parseSerializedItem(data: TSerializedDataITem, classes: Array<IClassData>): any {
@@ -67,8 +85,26 @@ export class Parser {
         return self;
     }
 
-    private static isSerializedField(data: any): data is TSerializedDataITem {
-        return data && '__type' in data && ['serialized-function', 'serialized-class', 'serialized-instance'].indexOf(data.__type) !== -1;
+    private static _isSerializedField(data: any): data is TSerializedDataITem {
+        return data && '__type' in data && [
+            'serialized-function',
+            'serialized-class',
+            'serialized-instance'
+        ].indexOf(data.__type) !== -1;
+    }
+
+    private _compile(data: { name: string, code: string }): Promise<any> {
+        if (Parser._canUseUrl) {
+            return Parser.evalByUrl(data)
+                .catch(e => {
+                    // TODO add check url error
+                    Parser._canUseUrl = false;
+                });
+        }
+    }
+
+    private static evalByUrl(code: string): Promise<any> {
+
     }
 
 }

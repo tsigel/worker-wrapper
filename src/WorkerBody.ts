@@ -7,18 +7,18 @@ export const enum MESSAGE_TYPE {
     WORK
 }
 
-export function getWorkerBody(Jsonifier, Parser): any {
+export function getWorkerBody(Serializer, Parser): any {
 
     return class WorkerBody {
 
         private readonly _stringifyMode: boolean;
-        private readonly _jsonify: any;
+        private readonly _serializer: any;
         private readonly _parser: any;
         private child: any;
 
 
         constructor(stringifyMode: boolean) {
-            this._jsonify = new Jsonifier();
+            this._serializer = new Serializer();
             this._parser = new Parser();
             this._stringifyMode = stringifyMode;
             this.setHandlers();
@@ -31,7 +31,6 @@ export function getWorkerBody(Jsonifier, Parser): any {
         }
 
         protected onMessage(message: TTask): void {
-
             switch (message.type) {
                 case MESSAGE_TYPE.ADD_LIBS:
                     this.process(() => this.addLibs(message.libs), message.id);
@@ -68,7 +67,7 @@ export function getWorkerBody(Jsonifier, Parser): any {
         }
 
         protected send(data: IResponse<any>): void {
-            data.body = this._jsonify.toJSON(data.body);
+            data.body = this._serializer.toJSON(data.body);
             try {
                 (self as any).postMessage(this._stringifyMode ? JSON.stringify(data) : data);
             } catch (e) {
