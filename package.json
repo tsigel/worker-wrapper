@@ -31,8 +31,7 @@
     "webpack-cli": "^3.3.5"
   },
   "files": [
-    "dist",
-    "src"
+    "dist"
   ],
   "scripts": {
     "prepare": "npm run clean && node_modules/.bin/webpack --config webpack.conf.js",
