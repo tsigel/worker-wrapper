@@ -1,4 +1,5 @@
-///<reference path="../interface.d.ts"/>
+import workerWrapper from '../src';
+
 declare const testLib: string;
 
 
@@ -57,11 +58,15 @@ describe('WorkerWrapper', () => {
 
             it('simple function with function param', (done) => {
                 workerWrapper.create().process(({ cb, data }) => {
+                    debugger;
                     return cb(data);
-                }, { cb: (data) => data.test, data: { test: 'test' } })
+                }, { cb: (data: any) => data.test, data: { test: 'test' } })
                     .then((res) => {
                         expect(res).to.be('test');
                         done();
+                    })
+                    .catch(e => {
+                        expect().fail(e.message);
                     });
             });
 
@@ -77,23 +82,6 @@ describe('WorkerWrapper', () => {
                     return promise;
                 }).catch((data) => {
                     expect(data).to.be.ok();
-                    done();
-                });
-            });
-
-            it('simple with lib', (done) => {
-                const workFunc = function () {
-                    return Promise.resolve(testLib);
-                };
-
-                const worker = workerWrapper.create(workFunc, {
-                    libs: ['/base/test/lib.js']
-                });
-
-                worker.process((promise) => {
-                    return promise;
-                }).then((text: string) => {
-                    expect(text).to.be('test');
                     done();
                 });
             });
@@ -116,7 +104,7 @@ describe('WorkerWrapper', () => {
 
                     private params: any;
 
-                    constructor(params) {
+                    constructor(params: any) {
                         super();
                         this.params = params;
                     }
@@ -129,7 +117,7 @@ describe('WorkerWrapper', () => {
 
                 class TestWithObjectInPrototype {
 
-                    public testData;
+                    public testData: any;
 
                     public test() {
                         return this.testData.test();

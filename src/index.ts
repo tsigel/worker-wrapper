@@ -1,6 +1,6 @@
 import { getWorkerBody } from './WorkerBody';
-import { IAnyClass, IConfig, IMain } from './interface';
-import { Jsonifier } from './Jsonifier';
+import { IAnyClass, IConfig, IMain, TAnyFunction } from './interface';
+import { Serializer } from './Serializer';
 import { Wrap } from './Wrap';
 import { Parser } from './Parser';
 
@@ -9,14 +9,14 @@ class Main implements IMain {
 
     private _options: IConfig = {
         libs: [],
-        customWorker: getWorkerBody(Jsonifier, Parser),
+        customWorker: getWorkerBody(Serializer, Parser),
         stringifyMode: false
     };
 
     public classes = {
-        Jsonifier: Jsonifier,
+        Serializer: Serializer,
         Parser: Parser,
-        WorkerBody: getWorkerBody(Jsonifier, Parser)
+        WorkerBody: getWorkerBody(Serializer, Parser)
     };
 
     public config(options: Partial<IConfig>): void {
@@ -28,8 +28,8 @@ class Main implements IMain {
     }
 
     public create(arg1?: any, arg2?: any, arg3?: any): any {
-        let processor: IAnyClass<any, any>;
-        let options: Partial<IConfig>;
+        let processor: IAnyClass<any, any> | undefined;
+        let options: Partial<IConfig> | undefined;
         let params;
         if (typeof arg1 === 'function') {
             processor = arg1;
@@ -58,18 +58,38 @@ class Main implements IMain {
         return new Wrap(worker, { child: processor, params }, myOptions.libs, myOptions.stringifyMode);
     }
 
-    private _createWorker(customWorker: typeof WorkerBody, stringifyMode: boolean): Worker {
-        const content = Jsonifier.createTemplate(customWorker, [Jsonifier, Parser]);
-        const template = `var MyWorker = ${content}; new MyWorker(${stringifyMode})`;
-
+    private _createWorker(customWorker: typeof Wrap, stringifyMode?: boolean): Worker {
+        const template = `var MyWorker = ${this._createTemplate(customWorker)}; new MyWorker(${stringifyMode})`;
         const blob = new Blob([template], { type: 'application/javascript' });
         return new Worker(URL.createObjectURL(blob));
     }
 
+    private _createTemplate(WorkerBody: typeof Wrap): string {
+        const Name = Serializer.getFnName(WorkerBody);
+
+        if (!Name) {
+            throw new Error('Unnamed Worker Body class! Please add name to Worker Body class!');
+        }
+
+        return [
+            '(function () {', ...[
+                Serializer,
+                Parser,
+                WorkerBody].map(this._getFullClassTemplate),
+            `return ${Name}})();`]
+            .join('\n');
+    }
+
+    private _getFullClassTemplate(Factory: TAnyFunction): string {
+        return Serializer.getFullClassTemplate(Factory).reduce((template, data) => {
+            return `var ${data.name} = ${data.template}`;
+        }, '');
+    }
+
     private _isConfig(data: any): boolean {
-        const keys = data && Object.keys(data) || [];
-        return keys.length && keys.every((key) => {
-            return this._options[key] &&
+        const keys = data && Object.keys(data) as Array<keyof IConfig> || [];
+        return !!keys.length && keys.every((key) => {
+            return !!this._options[key] &&
                 typeof data[key] === typeof this._options[key] &&
                 Array.isArray(data[key]) === Array.isArray(this._options[key]);
         });
@@ -77,4 +97,4 @@ class Main implements IMain {
 
 }
 
-export = (new Main()) as IMain;
+export default new Main() as IMain;

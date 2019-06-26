@@ -1,85 +1,109 @@
-import { Ijsonify, IjsonifyClass, IjsonifyPathInstance, TjsonifyPath } from './interface';
-import { DATA_TYPES } from './utils';
+import { IClassData, ISerialized, TSerializedDataITem } from './Serializer';
+import { TAnyFunction } from './interface';
+
+type TGlobalKey = keyof typeof self;
 
 
 export class Parser {
 
-    private _classes: IHash<any>;
+    private readonly _classes: Record<string, { name: string, Factory: TAnyFunction }> = Object.create(null);
 
-    constructor() {
-        this._classes = Object.create(null);
-    }
 
-    public parse(data: Ijsonify): any {
-        data.classes.forEach(this._addClassData, this);
+    public parse(data: ISerialized): any {
+        this._addClassData(data.classes);
 
-        if (!data.data && data.paths.length) {
-            data.data = this._getPathData(data.paths.shift());
-        }
-
-        this._fill(data.data, data.paths);
-
-        return data.data;
-    }
-
-    private _fill(data: any, paths: Array<TjsonifyPath>): void {
-        paths.forEach((path) => {
-            this._set(data, path.path, this._getPathData(path));
-        });
-    }
-
-    private _set(target, path, data): void {
-        let tmp = target;
-        path.split('.').forEach((part, index, list) => {
-            if (index === list.length - 1) {
-                tmp[part] = data;
-            } else {
-                if (!tmp[part]) {
-                    tmp[part] = Object.create(null);
-                }
-                tmp = tmp[part];
+        const loop = (item: any): any => {
+            if (Parser._isSerializedField(item)) {
+                return this._parseSerializedItem(item, data.classes);
             }
-        });
+
+            if (Array.isArray(item)) {
+                return item.map(loop);
+            }
+
+            if (!item) {
+                return item;
+            }
+
+            if (typeof item !== 'object') {
+                return item;
+            }
+
+            return Object.entries(item)
+                .reduce(
+                    (acc, [key, value]) => Object.assign(acc, { [key]: loop(value) }),
+                    {}
+                );
+        };
+
+        return loop(data.data);
     }
 
-    private _getPathData(path: TjsonifyPath): any {
-        switch (path.type) {
-            case DATA_TYPES.CLASS:
-                return this._classes[path.name];
-            case DATA_TYPES.FUNCTION:
-                return this._parseFunc(path.value);
-            case DATA_TYPES.INSTANCE:
-                return this._parseInstance(path);
+    private _parseSerializedItem(data: TSerializedDataITem, classes: Array<IClassData>): any {
+        switch (data.__type) {
+            case 'serialized-class':
+                return this._classes[classes[data.index].template].Factory;
+            case 'serialized-function':
+                // TODO Add Cache
+                return Parser._compile(data.template);
+            case 'serialized-instance':
+                return Parser._parseInstance(data.data, this._classes[classes[data.index].template].Factory);
         }
     }
 
-    private _parseInstance(path: IjsonifyPathInstance): any {
-        const instance = Object.create(this._classes[path.name].prototype);
-        Object.keys(path.value || {}).forEach((key) => {
-            instance[key] = path.value[key];
+    private _addClassData(list: Array<IClassData>): void {
+        list.forEach((classData, index, list) => {
+            if (this._classes[classData.template]) {
+                return undefined;
+            }
+
+            if (classData.name in self && classData.template === self[classData.name as TGlobalKey].constructor.toString()) {
+                return undefined;
+            }
+
+            const parent = classData.parent != null && list[classData.parent] || undefined;
+            this._compileClass(classData, parent);
         });
+    }
+
+    private _compileClass(classData: IClassData, parent?: IClassData): void {
+        const needReplace = parent && parent.name in self && parent.template !== self[parent.name as TGlobalKey].constructor.toString();
+        const hasValue = !parent || parent.name in self;
+        const parentOrigin = needReplace && self[(parent as IClassData).name as TGlobalKey];
+
+        if (!hasValue || needReplace) {
+            self[(parent as IClassData).name as any] = this._classes[(parent as IClassData).template].Factory as any;
+        }
+
+        const Factory = eval(`(function () { return ${classData.template} })();`);
+
+        if (needReplace) {
+            self[(parent as IClassData).name as any] = parentOrigin;
+        }
+
+        this._classes[classData.template] = {
+            name: classData.name,
+            Factory
+        };
+    }
+
+    private static _parseInstance(data: any, Factory: TAnyFunction): any {
+        const instance = Object.create(Factory.prototype);
+        Object.assign(instance, data);
         return instance;
     }
 
-    private _addClassData(classData: IjsonifyClass) {
-        //TODO Add safe mode for compile classes!
-        if (!this._classes[classData.name]) {
-            const root = Parser._getRoot();
-            if (root[classData.name]) {
-                this._classes[classData.name] = root[classData.name];
-            } else {
-                this._classes[classData.name] = this._parseFunc(classData.value);
-                root[classData.name] = this._classes[classData.name];
-            }
-        }
+    private static _isSerializedField(data: any): data is TSerializedDataITem {
+        return typeof data === 'object' && data && '__type' in data && [
+            'serialized-function',
+            'serialized-class',
+            'serialized-instance'
+        ].indexOf(data.__type) !== -1;
     }
 
-    private _parseFunc(template: string): any {
+    private static _compile(code: string): any {
+        const template = `(function () { return ${code} })();`;
         return eval(template);
-    }
-
-    private static _getRoot(): any {
-        return self;
     }
 
 }

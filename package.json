@@ -2,7 +2,7 @@
   "name": "worker-wrapper",
   "version": "1.2.3",
   "dependencies": {},
-  "typings": "src/interface.d.ts",
+  "typings": "interface.d.ts",
   "main": "dist/WorkerWrapper.min.js",
   "repository": {
     "type": "git",
@@ -18,14 +18,16 @@
   "devDependencies": {
     "@types/expect.js": "^0.3.29",
     "@types/mocha": "^5.2.5",
+    "@types/node": "^12.0.10",
     "browserify": "^16.2.2",
     "expect.js": "^0.3.1",
-    "karma": "^2.0.5",
+    "karma": "^4.1.0",
     "karma-chrome-launcher": "^2.2.0",
     "karma-mocha": "^1.3.0",
-    "mocha": "^5.2.0",
-    "typescript": "^3.0.1",
-    "uglify-js": "^3.4.6"
+    "karma-typescript": "^4.1.0",
+    "mocha": "^6.1.4",
+    "typescript": "^3.5.2",
+    "uglify-js": "^3.6.0"
   },
   "files": [
     "dist",
@@ -38,7 +40,7 @@
     "browserify": "node_modules/.bin/browserify dist/js/index.js -o dist/WorkerWrapper.js -s worker-wrapper",
     "uglify": "node_modules/.bin/uglifyjs dist/WorkerWrapper.js -o dist/WorkerWrapper.min.js",
     "pretest": "npm run build",
-    "test": "node_modules/karma/bin/karma start",
+    "test": "tsc && node_modules/karma/bin/karma start --singleRun",
     "test-debug": "node_modules/karma/bin/karma start --singleRun false --autoWatch true",
     "preversion": "npm run test",
     "postversion": "git push origin HEAD && git push origin HEAD --tags && npm run build && npm publish"

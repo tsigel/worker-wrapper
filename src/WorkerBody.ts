@@ -1,4 +1,6 @@
 import { IAddProcessorTask, IMessage, IResponse, IWorkTask, TTask } from './interface';
+import { Serializer as SerializerClass } from './Serializer';
+import { Parser as ParserClass } from './Parser';
 
 
 export const enum MESSAGE_TYPE {
@@ -7,18 +9,18 @@ export const enum MESSAGE_TYPE {
     WORK
 }
 
-export function getWorkerBody(Jsonifier, Parser): any {
+export function getWorkerBody(Serializer: typeof SerializerClass, Parser: typeof ParserClass): any {
 
     return class WorkerBody {
 
         private readonly _stringifyMode: boolean;
-        private readonly _jsonify: any;
-        private readonly _parser: any;
+        private readonly _serializer: SerializerClass;
+        private readonly _parser: ParserClass;
         private child: any;
 
 
         constructor(stringifyMode: boolean) {
-            this._jsonify = new Jsonifier();
+            this._serializer = new Serializer();
             this._parser = new Parser();
             this._stringifyMode = stringifyMode;
             this.setHandlers();
@@ -31,7 +33,6 @@ export function getWorkerBody(Jsonifier, Parser): any {
         }
 
         protected onMessage(message: TTask): void {
-
             switch (message.type) {
                 case MESSAGE_TYPE.ADD_LIBS:
                     this.process(() => this.addLibs(message.libs), message.id);
@@ -46,15 +47,17 @@ export function getWorkerBody(Jsonifier, Parser): any {
         }
 
         protected addLibs(libs: Array<string>): void {
-            libs.forEach((lib) => self.importScripts(lib));
+            libs.forEach((lib) => (self as any).importScripts(lib));
         }
 
         protected addProcessor(data: IAddProcessorTask): void {
-            const Child = eval(data.codeData.template);
-            if (data.codeData.isSimple) {
-                this.child = Child(data.params);
+            const params = this._parser.parse(data.params);
+            const Child = this._parser.parse(data.codeData);
+
+            if (Serializer.isFunction(Child)) {
+                this.child = Child(params);
             } else {
-                this.child = new Child(data.params);
+                this.child = new Child(params);
             }
         }
 
@@ -68,7 +71,7 @@ export function getWorkerBody(Jsonifier, Parser): any {
         }
 
         protected send(data: IResponse<any>): void {
-            data.body = this._jsonify.toJSON(data.body);
+            data.body = this._serializer.serialize(data.body);
             try {
                 (self as any).postMessage(this._stringifyMode ? JSON.stringify(data) : data);
             } catch (e) {
@@ -83,13 +86,13 @@ export function getWorkerBody(Jsonifier, Parser): any {
 
         protected doWork(message: IWorkTask): void {
             try {
-                const processor = eval(message.job);
+                const processor = this._parser.parse(message.job);
                 const params = this._parser.parse(message.params);
                 const result = this.child ? processor(this.child, params) : processor(params);
                 if (result && result.then && typeof result.then === 'function') {
-                    result.then((data) => {
+                    result.then((data: any) => {
                         this.send({ id: message.id, state: true, body: data });
-                    }, (error) => {
+                    }, (error: any) => {
                         if (error instanceof Error) {
                             error = String(error);
                         }

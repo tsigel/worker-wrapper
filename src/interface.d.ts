@@ -1,5 +1,4 @@
 import { MESSAGE_TYPE } from './WorkerBody';
-import { DATA_TYPES } from './utils';
 
 export interface IMain {
     create<T, R>(child: IAnyClass<T, R> | ICallback<R, T>, params: R, options?: Partial<IConfig>): IWrapProcess<T>;
@@ -35,15 +34,6 @@ export interface IContent {
     value: string;
     type: TTypeList;
     isPrototype: boolean;
-}
-
-export interface IHash<T> {
-    [key: string]: T;
-}
-
-export interface IContentData {
-    isSimple: boolean;
-    template: string;
 }
 
 export interface IDefer<T> {
@@ -92,12 +82,12 @@ export interface IAddLibsTask extends IDefaultMessage {
 export interface IWorkTask extends IDefaultMessage {
     type: MESSAGE_TYPE.WORK;
     params: any;
-    job: string;
+    job: any;
 }
 
 export interface IAddProcessorTask extends IDefaultMessage {
     type: MESSAGE_TYPE.ADD_PROCESSOR,
-    codeData: IContentData;
+    codeData: any;
     params: any;
 }
 
@@ -105,37 +95,7 @@ export interface ICallback<P, R> {
     (data: P): R;
 }
 
-export interface Ijsonify {
-    data: any;
-    classes: Array<IjsonifyClass>;
-    paths: Array<TjsonifyPath>;
-}
-
-export interface IjsonifyClass {
-    name: string;
-    value: string;
-}
-
-export interface IjsonifyPathFunction {
-    type: DATA_TYPES.FUNCTION,
-    path: string;
-    value: string;
-}
-
-export interface IjsonifyPathClass {
-    type: DATA_TYPES.CLASS,
-    path: string;
-    name: string;
-}
-
-export interface IjsonifyPathInstance {
-    type: DATA_TYPES.INSTANCE,
-    path: string;
-    value: Object;
-    name: string;
-}
-
-export type TjsonifyPath = IjsonifyPathFunction | IjsonifyPathInstance | IjsonifyPathClass;
+export type TAnyFunction = ((...args: Array<any>) => any) | (new (...args: Array<any>) => any);
 
 export type TTask = IAddLibsTask | IWorkTask | IAddProcessorTask;
 export type TTypeList = 'string' | 'number' | 'function' | 'object' | 'boolean' | 'undefined'
