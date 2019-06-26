@@ -1,25 +1,25 @@
 import { MESSAGE_TYPE } from './WorkerBody';
 
-import { IDefer, IHash, IMessage, IResponse, ISimpleWrap, IWorkerClassData, IWrapProcess, TTask } from './interface';
-import { Jsonifier } from './Jsonifier';
+import { IDefer, IMessage, IResponse, ISimpleWrap, IWorkerClassData, IWrapProcess, TTask } from './interface';
+import { Serializer } from './Serializer';
 import { Parser } from './Parser';
 
 
 export class Wrap<T, R> implements ISimpleWrap, IWrapProcess<T> {
 
     private readonly _worker: Worker;
-    private readonly _actionsHash: IHash<IDefer<any>>;
+    private readonly _actionsHash: Record<string, IDefer<any>>;
     private readonly _ready: Promise<boolean>;
     private readonly _stringifyMode: boolean;
-    private readonly _jsonify: Jsonifier;
+    private readonly _serializer: Serializer;
     private readonly _parser: Parser;
 
 
-    constructor(worker: Worker, classData: IWorkerClassData<T, R>, libs: Array<string>, stringifyMode: boolean) {
+    constructor(worker: Worker, classData: IWorkerClassData<T, R>, libs?: Array<string>, stringifyMode?: boolean) {
         this._worker = worker;
         this._actionsHash = Object.create(null);
-        this._stringifyMode = stringifyMode;
-        this._jsonify = new Jsonifier();
+        this._stringifyMode = stringifyMode == null ? false : stringifyMode;
+        this._serializer = new Serializer();
         this._parser = new Parser();
 
         this._setHandlers();
@@ -36,12 +36,12 @@ export class Wrap<T, R> implements ISimpleWrap, IWrapProcess<T> {
         });
     }
 
-    public process(cb: Function, params?): Promise<any> {
+    public process(cb: Function, params?: any): Promise<any> {
         return this._ready.then(() => {
             return this._sendMessage({
                 type: MESSAGE_TYPE.WORK,
-                params: this._jsonify.toJSON(params),
-                job: Jsonifier.toStringFunction(cb)
+                params: this._serializer.serialize(params),
+                job: this._serializer.serialize(cb)
             });
         });
     }
@@ -85,7 +85,7 @@ export class Wrap<T, R> implements ISimpleWrap, IWrapProcess<T> {
         });
     }
 
-    private _getSendData(body: Partial<TTask>, id) {
+    private _getSendData(body: Partial<TTask>, id: string): any {
         const data = { ...body, id };
         if (this._stringifyMode) {
             return JSON.stringify(data);
@@ -115,8 +115,8 @@ export class Wrap<T, R> implements ISimpleWrap, IWrapProcess<T> {
 
         return this._sendMessage({
             type: MESSAGE_TYPE.ADD_PROCESSOR,
-            codeData: Jsonifier.stringify(classData.child),
-            params: classData.params
+            codeData: this._serializer.serialize(classData.child),
+            params: this._serializer.serialize(classData.params)
         });
     }
 

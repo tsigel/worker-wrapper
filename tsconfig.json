@@ -6,6 +6,7 @@
     "declaration": true,
     "module": "commonjs",
     "outDir": "dist/js",
+    "skipDefaultLibCheck": true,
     "lib": [
       "es2015.promise",
       "dom",
@@ -18,8 +19,10 @@
       "node_modules/@types"
     ]
   },
+  "exclude": [
+    "dist"
+  ],
   "files": [
-    "src/index.ts",
-    "interface.d.ts"
+    "src/index.ts"
   ]
 }

@@ -1,4 +1,6 @@
 import { IAddProcessorTask, IMessage, IResponse, IWorkTask, TTask } from './interface';
+import { Serializer as SerializerClass } from './Serializer';
+import { Parser as ParserClass } from './Parser';
 
 
 export const enum MESSAGE_TYPE {
@@ -7,13 +9,13 @@ export const enum MESSAGE_TYPE {
     WORK
 }
 
-export function getWorkerBody(Serializer, Parser): any {
+export function getWorkerBody(Serializer: typeof SerializerClass, Parser: typeof ParserClass): any {
 
     return class WorkerBody {
 
         private readonly _stringifyMode: boolean;
-        private readonly _serializer: any;
-        private readonly _parser: any;
+        private readonly _serializer: SerializerClass;
+        private readonly _parser: ParserClass;
         private child: any;
 
 
@@ -49,11 +51,13 @@ export function getWorkerBody(Serializer, Parser): any {
         }
 
         protected addProcessor(data: IAddProcessorTask): void {
-            const Child = eval(data.codeData.template);
-            if (data.codeData.isSimple) {
-                this.child = Child(data.params);
+            const params = this._parser.parse(data.params);
+            const Child = this._parser.parse(data.codeData);
+
+            if (Serializer.isFunction(Child)) {
+                this.child = Child(params);
             } else {
-                this.child = new Child(data.params);
+                this.child = new Child(params);
             }
         }
 
@@ -67,7 +71,7 @@ export function getWorkerBody(Serializer, Parser): any {
         }
 
         protected send(data: IResponse<any>): void {
-            data.body = this._serializer.toJSON(data.body);
+            data.body = this._serializer.serialize(data.body);
             try {
                 (self as any).postMessage(this._stringifyMode ? JSON.stringify(data) : data);
             } catch (e) {
@@ -82,13 +86,13 @@ export function getWorkerBody(Serializer, Parser): any {
 
         protected doWork(message: IWorkTask): void {
             try {
-                const processor = eval(message.job);
+                const processor = this._parser.parse(message.job);
                 const params = this._parser.parse(message.params);
                 const result = this.child ? processor(this.child, params) : processor(params);
                 if (result && result.then && typeof result.then === 'function') {
-                    result.then((data) => {
+                    result.then((data: any) => {
                         this.send({ id: message.id, state: true, body: data });
-                    }, (error) => {
+                    }, (error: any) => {
                         if (error instanceof Error) {
                             error = String(error);
                         }

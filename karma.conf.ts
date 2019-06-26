@@ -1,22 +1,32 @@
-declare const module: any;
+const tsconfig = require('./tsconfig.json');
 
-module.exports = function (config) {
+export = function (config: any): any {
     config.set({
+
+        karmaTypescriptConfig: {
+            ...tsconfig,
+            bundlerOptions: {
+                addNodeGlobals: false
+            },
+            coverageOptions: {
+                instrumentation: false,
+                exclude: [
+                    /src\/WorkerBody\.ts/
+                ]
+            }
+        },
 
         // base path that will be used to resolve all patterns (eg. files, exclude)
         basePath: '',
 
         // frameworks to use
         // available frameworks: https://npmjs.org/browse/keyword/karma-adapter
-        frameworks: ['mocha'],
+        frameworks: ['mocha', 'karma-typescript'],
         // list of files / patterns to load in the browser
         files: [
             { pattern: 'node_modules/expect.js/index.js' },
-            { pattern: 'dist/WorkerWrapper.js' },
-            { pattern: 'src/**.ts', included: false },
-            { pattern: 'test/**.ts', included: false },
-            { pattern: 'test/*.js.map', included: false },
-            { pattern: 'test/**/*.js' },
+            { pattern: 'src/**.ts' },
+            { pattern: 'test/**.ts' },
         ],
 
         // list of files to exclude
@@ -24,12 +34,14 @@ module.exports = function (config) {
 
         // preprocess matching files before serving them to the browser
         // available preprocessors: https://npmjs.org/browse/keyword/karma-preprocessor
-        preprocessors: {},
+        preprocessors: {
+            '**/*.ts': 'karma-typescript'
+        },
 
         // test results reporter to use
         // possible values: 'dots', 'progress'
         // available reporters: https://npmjs.org/browse/keyword/karma-reporter
-        reporters: ['progress'],
+        reporters: ['progress', 'karma-typescript'],
 
         // web server port
         port: 9876,

@@ -1,11 +1,14 @@
-import { TAnyFunction } from './utils/interface';
-import { getFnNameForce } from './utils/utils';
+import { TAnyFunction } from './interface';
 
 
 export class Serializer {
 
     private _constructorList: Array<TAnyFunction> = [];
     private _classes: Array<IClassData> = [];
+    private static _getUniqFunctionName = (() => {
+        let count = 0;
+        return () => `Unnamed_${count++}`;
+    })();
 
 
     public serialize(data: any): ISerialized {
@@ -67,10 +70,12 @@ export class Serializer {
     private _addConstructor(Factory: TAnyFunction): number {
         const index = this._constructorList.indexOf(Factory);
         if (index === -1) {
-            Serializer.getFullClassTemplate(Factory).forEach(item => {
+            Serializer.getFullClassTemplate(Factory).forEach((item, i, list) => {
                 if (this._constructorList.indexOf(item.factory) === -1) {
+                    const parentData = list[i - 1];
+                    const parent = parentData ? this._classes.length - 1 : undefined;
                     this._constructorList.push(item.factory);
-                    this._classes.push({ template: item.template, name: item.name });
+                    this._classes.push({ template: item.template, name: item.name, parent });
                 }
             });
             return this._constructorList.length - 1;
@@ -132,7 +137,7 @@ export class Serializer {
     public static getFullClassTemplate(Factory: TAnyFunction): Array<{ name: string; template: string, factory: TAnyFunction }> {
         const dataList: Array<IClassDetails> = Serializer.getClassParents(Factory).map(item => Serializer._getClassData(item));
 
-        const classListData = dataList.map((info, index, list) => {
+        return dataList.map((info, index, list) => {
             const parent = list[index - 1];
             return {
                 name: info.Name,
@@ -140,15 +145,22 @@ export class Serializer {
                 factory: info.Factory
             };
         });
+    }
 
-        return classListData;
+    public static getFnName(fn: TAnyFunction): string | null {
+        const s = ((fn.name && ['', fn.name]) || fn.toString().match(/function ([^\(]+)/));
+        return (s && s[1] || null);
+    }
+
+    public static getFnNameForce(func: TAnyFunction): string {
+        return Serializer.getFnName(func) || Serializer._getUniqFunctionName();
     }
 
     private static _getClassData(Factory: TAnyFunction): IClassDetails;
     private static _getClassData(Factory: undefined): undefined;
     private static _getClassData(Factory: TAnyFunction | undefined): IClassDetails | undefined {
         return Factory ? {
-            Name: getFnNameForce(Factory),
+            Name: Serializer.getFnNameForce(Factory),
             Factory
         } : undefined;
     }
@@ -157,7 +169,7 @@ export class Serializer {
         // TODO Add Es6 support
         const ParentName = parent && parent.Name || undefined;
         return [
-            `var ${target.Name} = (function () { `,
+            `(function () { `,
             Serializer._getConstructorTemplate(target.Factory, target.Name, ParentName),
             Serializer._getPrototypeTemplate(target.Factory, target.Name, ParentName),
             Serializer._getStaticTemplate(target.Factory, target.Name),
@@ -204,8 +216,10 @@ export class Serializer {
             case 'function':
                 // TODO Add Class check
                 // TODO Add super support
+                // TODO Add support getters/setters
                 return `${ClassName}.prototype.${propName} = ${Serializer._replaceSuper(item, ParentName)};`;
             default:
+                // TODO Add support getters/setters
                 return `${ClassName}.prototype.${propName} = ${item};`;
         }
     }
@@ -215,11 +229,13 @@ export class Serializer {
             case 'object':
                 // TODO Add instance check
                 // TODO Add stringify error catch
+                // TODO Add support getters/setters
                 return `${ClassName}.${propName} = ${JSON.stringify(item)};`;
             case 'function':
                 // TODO Add Class check
                 return `${ClassName}.${propName} = ${item.toString()};`;
             default:
+                // TODO Add support getters/setters
                 return `${ClassName}.${propName} = ${item};`;
         }
     }
@@ -237,10 +253,6 @@ export class Serializer {
 
 }
 
-const item = new Serializer();
-console.log(item.serialize(Serializer).classes[0].template);
-
-
 export interface ISerialized {
     data: any;
     classes: Array<IClassData>;
@@ -249,6 +261,7 @@ export interface ISerialized {
 export interface IClassData {
     name: string;
     template: string;
+    parent?: number;
 }
 
 export interface IFunctionDataItem {
