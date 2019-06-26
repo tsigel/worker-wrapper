@@ -9,10 +9,7 @@ export = function (config: any): any {
                 addNodeGlobals: false
             },
             coverageOptions: {
-                instrumentation: false,
-                exclude: [
-                    /src\/WorkerBody\.ts/
-                ]
+                instrumentation: false
             }
         },
 

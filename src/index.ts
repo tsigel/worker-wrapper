@@ -1,22 +1,21 @@
-import { getWorkerBody } from './WorkerBody';
-import { IAnyClass, IConfig, IMain, TAnyFunction } from './interface';
+import { WorkerBody } from './WorkerBody';
+import { IAnyClass, ICallback, IConfig, IMain, ISimpleWrap, IWrapProcess, TAnyFunction } from './interface';
 import { Serializer } from './Serializer';
 import { Wrap } from './Wrap';
 import { Parser } from './Parser';
 
+export * from './WorkerBody';
+export * from './Serializer';
+export * from './Parser';
+export * from './Wrap';
+export * from './Wrap';
 
 class Main implements IMain {
 
     private _options: IConfig = {
         libs: [],
-        customWorker: getWorkerBody(Serializer, Parser),
+        customWorker: WorkerBody,
         stringifyMode: false
-    };
-
-    public classes = {
-        Serializer: Serializer,
-        Parser: Parser,
-        WorkerBody: getWorkerBody(Serializer, Parser)
     };
 
     public config(options: Partial<IConfig>): void {
@@ -59,12 +58,12 @@ class Main implements IMain {
     }
 
     private _createWorker(customWorker: typeof Wrap, stringifyMode?: boolean): Worker {
-        const template = `var MyWorker = ${this._createTemplate(customWorker)}; new MyWorker(${stringifyMode})`;
+        const template = `var MyWorker = ${this._createTemplate(customWorker, stringifyMode)};`;
         const blob = new Blob([template], { type: 'application/javascript' });
         return new Worker(URL.createObjectURL(blob));
     }
 
-    private _createTemplate(WorkerBody: typeof Wrap): string {
+    private _createTemplate(WorkerBody: typeof Wrap, stringifyMode?: boolean): string {
         const Name = Serializer.getFnName(WorkerBody);
 
         if (!Name) {
@@ -72,17 +71,17 @@ class Main implements IMain {
         }
 
         return [
-            '(function () {', ...[
-                Serializer,
-                Parser,
-                WorkerBody].map(this._getFullClassTemplate),
-            `return ${Name}})();`]
-            .join('\n');
+            '(function () {',
+            this._getFullClassTemplate(Serializer, 'Serializer'),
+            this._getFullClassTemplate(Parser, 'Parser'),
+            this._getFullClassTemplate(WorkerBody, 'WorkerBody'),
+            `return new WorkerBody(Serializer, Parser, ${!!stringifyMode})})();`
+        ].join('\n');
     }
 
-    private _getFullClassTemplate(Factory: TAnyFunction): string {
+    private _getFullClassTemplate(Factory: TAnyFunction, forceName: string): string {
         return Serializer.getFullClassTemplate(Factory).reduce((template, data) => {
-            return `var ${data.name} = ${data.template}`;
+            return `var ${forceName} = ${data.template}`;
         }, '');
     }
 
@@ -97,4 +96,22 @@ class Main implements IMain {
 
 }
 
-export default new Main() as IMain;
+const main = new Main();
+
+export function create<T, R>(child: IAnyClass<T, R> | ICallback<R, T>, params: R, options?: Partial<IConfig>): IWrapProcess<T>;
+export function create<T>(child: IAnyClass<T, void> | ICallback<void, T>, options?: Partial<IConfig>): IWrapProcess<T>;
+export function create<T, R>(child: IAnyClass<T, R> | ICallback<R, T>, params: R): IWrapProcess<T>;
+export function create<T>(child: IAnyClass<T, void> | ICallback<void, T>): IWrapProcess<T>;
+export function create(options: Partial<IConfig>): ISimpleWrap;
+export function create(): ISimpleWrap;
+export function create(a?: any, b?: any): any {
+    return main.create(a, b);
+}
+
+export function getConfig(): Readonly<IConfig> {
+    return main.getConfig();
+}
+
+export function config(config: Partial<IConfig>): void {
+    return main.config(config);
+}

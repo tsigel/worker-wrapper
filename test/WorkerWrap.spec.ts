@@ -1,4 +1,4 @@
-import workerWrapper from '../src';
+import * as workerWrapper from '../src';
 
 declare const testLib: string;
 
