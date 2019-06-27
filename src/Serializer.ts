@@ -43,6 +43,8 @@ export class Serializer {
                         return {
                             __type: 'serialized-instance',
                             index,
+                            // TODO add support instance of class in this
+                            // TODO add support getters/setters
                             data: origin
                         };
                     } else {
