@@ -58,7 +58,6 @@ describe('WorkerWrapper', () => {
 
             it('simple function with function param', (done) => {
                 workerWrapper.create().process(({ cb, data }) => {
-                    debugger;
                     return cb(data);
                 }, { cb: (data: any) => data.test, data: { test: 'test' } })
                     .then((res) => {

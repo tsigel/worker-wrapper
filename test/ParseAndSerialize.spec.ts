@@ -136,4 +136,26 @@ describe('Transfer', () => {
         });
         expect(second < first).to.be(true);
     });
+
+    it('Uint8Array', () => {
+        const data = Uint8Array.from([1, 2, 3]);
+        const result = parser.parse(serializer.serialize(data));
+        expect(result instanceof Uint8Array).to.be(true);
+    });
+
+    it('Uint16Array', () => {
+        const data = Uint16Array.from([1, 2, 3]);
+        const result = parser.parse(serializer.serialize(data));
+        expect(result instanceof Uint16Array).to.be(true);
+    });
+
+    it('ImageData', () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 200;
+        canvas.height = 200;
+        const ctx = canvas.getContext('2d') as any;
+        const data = ctx.getImageData(0, 0, 200, 200);
+        const result = parser.parse(serializer.serialize(data));
+        expect(result instanceof ImageData).to.be(true);
+    });
 });

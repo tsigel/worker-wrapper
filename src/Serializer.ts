@@ -48,7 +48,13 @@ export class Serializer {
                             data: origin
                         };
                     } else {
-                        if (Array.isArray(origin)) {
+                        if (Serializer.isNative(origin.constructor) && !['Object', 'Array'].includes(origin.constructor.name)) {
+                            return {
+                                __type: 'serialized-native-instance',
+                                constructorName: origin.constructor.name,
+                                data: origin
+                            };
+                        } else if (Array.isArray(origin)) {
                             return origin.map(loop);
                         } else {
                             const local = Object.create(null);
@@ -282,7 +288,13 @@ export interface IInstanceDataItem {
     data: any;
 }
 
-export type TSerializedDataITem = IFunctionDataItem | IClassDataItem | IInstanceDataItem;
+export interface INativeInstanceItem {
+    __type: 'serialized-native-instance';
+    constructorName: string;
+    data: any;
+}
+
+export type TSerializedDataITem = IFunctionDataItem | IClassDataItem | IInstanceDataItem | INativeInstanceItem;
 
 interface IClassDetails {
     Name: string;

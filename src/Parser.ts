@@ -41,6 +41,8 @@ export class Parser {
 
     private _parseSerializedItem(data: TSerializedDataITem, classes: Array<IClassData>): any {
         switch (data.__type) {
+            case 'serialized-native-instance':
+                return data.data;
             case 'serialized-class':
                 return this._classes[classes[data.index].template].Factory;
             case 'serialized-function':
@@ -95,6 +97,7 @@ export class Parser {
 
     private static _isSerializedField(data: any): data is TSerializedDataITem {
         return typeof data === 'object' && data && '__type' in data && [
+            'serialized-native-instance',
             'serialized-function',
             'serialized-class',
             'serialized-instance'
