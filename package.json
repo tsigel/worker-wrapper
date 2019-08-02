@@ -1,6 +1,6 @@
 {
   "name": "worker-wrapper",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "dependencies": {},
   "typings": "dist/js/index.d.ts",
   "main": "dist/worker-wrapper.js",
