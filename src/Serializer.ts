@@ -98,7 +98,7 @@ export class Serializer {
     }
 
     public static isNative(data: (...args: Array<any>) => any): boolean {
-        return /function .*?\(\) \{ \[native code\] \}/.test(data.toString());
+        return /function .*\(\).*\n?.*\[native code\]/.test(data.toString());
     }
 
     public static isInstance(some: any): boolean {
@@ -143,6 +143,7 @@ export class Serializer {
     }
 
     public static getFullClassTemplate(Factory: TAnyFunction): Array<{ name: string; template: string, factory: TAnyFunction }> {
+        debugger;
         const dataList: Array<IClassDetails> = Serializer.getClassParents(Factory).map(item => Serializer._getClassData(item));
 
         return dataList.map((info, index, list) => {
